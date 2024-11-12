@@ -29,7 +29,6 @@ def get_user_by_username(username: str):
     get user from database by username
     """
     try:
-        print(f"Getting user by username: {username}")
         response = client.table("users").select("*").eq("username", username.lower()).execute()
         return response.data[0]
     except Exception as e:

@@ -1,37 +1,17 @@
 """
-user auth/data operations module v1
+user data operations module v1
 """
 
 import bcrypt
 from fastapi import APIRouter
 from model.user_request_v1 import UserRequest
-from .database import user_exists, insert_user, get_user_by_username
-# from passlib.context import CryptContext
-
-# pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+from .database import user_exists, insert_user
 
 router = APIRouter(
     prefix="/user",
     tags=["user"],
     responses={404: {"description": "Not found"}}
 )
-
-@router.get("/verify")
-async def verify_user(username: str, password: str):
-    """
-    verify if user exists in the database and check if password matches the hashed password
-    """
-    try:
-        # get user from database
-        user = get_user_by_username(username=username)
-        # check if user exists and password matches with hashed password
-        if user and bcrypt.checkpw(password.encode(), user["password"].encode()):
-            return {"message": "User verified successfully"}
-        
-        return {"message": "Invalid username or password"}
-    except Exception as e:
-        print(f"Error verifying user: {e}")
-        return {"exception": "Invalid username or password"}
 
 @router.post("/")
 async def create_user(user: UserRequest):
@@ -55,8 +35,8 @@ async def create_user(user: UserRequest):
         # check if user was inserted successfully
         if new_user:
             return {"message": "User created successfully"}
-        else:
-            return {"message": "User creation failed"}
+
+        return {"message": "User creation failed"}
     except Exception as e:
         print(f"Error creating user: {e}")
         return {"message": "User creation failed"}
