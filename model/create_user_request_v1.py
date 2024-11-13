@@ -3,9 +3,9 @@ user auth model
 """
 from pydantic import BaseModel
 
-class UserRequest(BaseModel):
+class CreateUserRequest(BaseModel):
     """
-    user auth model
+    create user auth model
     """
     username: str
     password: str

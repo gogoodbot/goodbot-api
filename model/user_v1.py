@@ -8,5 +8,5 @@ class User(BaseModel):
     user database model
     """
     username: str
-    hashed_password: str
+    password: str
     active: int

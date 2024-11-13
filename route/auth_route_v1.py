@@ -6,11 +6,14 @@ from datetime import datetime, timedelta, timezone
 import os
 from typing import Annotated
 import jwt
+from jwt.exceptions import InvalidTokenError
 import bcrypt
 from fastapi import APIRouter, Depends, status, HTTPException
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from model.token_v1 import Token
 from .database import user_exists, get_user_by_username
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 router = APIRouter(
     prefix="/login",
@@ -79,20 +82,27 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> T
         print(f"Error logging in: {e}")
         return {"message": "Invalid username or password"}
 
-# async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
-#     credentials_exception = HTTPException(
-#         status_code=status.HTTP_401_UNAUTHORIZED,
-#         detail="Could not validate credentials",
-#         headers={"WWW-Authenticate": "Bearer"},
-#     )
-#     try:
-#         payload = jwt.decode(token, os.environ("SECRET_KEY"), algorithms=[os.environ("ALGORITHM")])
-#         token_username: str = payload.get("sub")
-#         if token_username is None:
-#             raise credentials_exception
-#     except InvalidTokenError:
-#         raise credentials_exception
-#     user = get_user(mock_users_db, username=token_username)
-#     if user is None:
-#         raise credentials_exception
-#     return user
+async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+    """
+    get current user from database using bearer token
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(
+            token,
+            os.environ.get("SECRET_KEY"), 
+            algorithms=[os.environ.get("ALGORITHM")]
+        )
+        token_username: str = payload.get("sub")
+        if token_username is None:
+            raise credentials_exception
+    except InvalidTokenError as e:
+        raise credentials_exception from e
+    user = get_user_by_username(token_username)
+    if user is None:
+        raise credentials_exception
+    return user

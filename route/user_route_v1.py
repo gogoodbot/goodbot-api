@@ -2,9 +2,12 @@
 user data operations module v1
 """
 
+from typing import Annotated
 import bcrypt
-from fastapi import APIRouter
-from model.user_request_v1 import UserRequest
+from fastapi import APIRouter, Depends
+from model.create_user_request_v1 import CreateUserRequest
+from model.user_v1 import User
+from .auth_route_v1 import get_current_user
 from .database import user_exists, insert_user
 
 router = APIRouter(
@@ -14,7 +17,7 @@ router = APIRouter(
 )
 
 @router.post("/")
-async def create_user(user: UserRequest):
+async def create_user(user: CreateUserRequest):
     """
     hash and salt password, check if user already exists, insert user into database
     """
@@ -40,3 +43,10 @@ async def create_user(user: UserRequest):
     except Exception as e:
         print(f"Error creating user: {e}")
         return {"message": "User creation failed"}
+
+@router.get("/me", response_model=User)
+async def get_user(current_user: Annotated[User, Depends(get_current_user)]):
+    """
+    get user from database by username
+    """
+    return current_user
