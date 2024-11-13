@@ -33,7 +33,7 @@ def authenticate_user(username: str, password: str):
             return True
 
         return False
-    except Exception as e:
+    except Exception as e: # pylint: disable=broad-except
         print(f"Error verifying user: {e}")
         return {"exception": "Invalid username or password"}
 
@@ -78,7 +78,7 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> T
             return Token(access_token=access_token, token_type="bearer")
 
         return {"message": "Invalid username or password"}
-    except Exception as e:
+    except Exception as e: # pylint: disable=broad-except
         print(f"Error logging in: {e}")
         return {"message": "Invalid username or password"}
 

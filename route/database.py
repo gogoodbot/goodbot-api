@@ -20,7 +20,7 @@ def user_exists(value: str):
     try:
         response = client.table("users").select("*").eq("username", value.lower()).execute()
         return len(response.data) > 0 and response.data[0]["active"] == 1
-    except Exception as e:
+    except Exception as e: # pylint: disable=broad-except
         print(f"Error checking if user exists: {e}")
         return False
 
@@ -31,7 +31,7 @@ def get_user_by_username(username: str):
     try:
         response = client.table("users").select("*").eq("username", username.lower()).execute()
         return response.data[0]
-    except Exception as e:
+    except Exception as e: # pylint: disable=broad-except
         print(f"Error getting user by username: {e}")
         return None
 
@@ -44,6 +44,6 @@ def insert_user(username: str, hashed_password: str):
             .insert({"username": username.lower(), "password": hashed_password})\
             .execute()
         return response.data
-    except Exception as e:
+    except Exception as e: # pylint: disable=broad-except
         print(f"Error inserting user into database: {e}")
         return None
