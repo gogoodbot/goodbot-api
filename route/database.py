@@ -47,3 +47,14 @@ def insert_user(username: str, hashed_password: str):
     except Exception as e: # pylint: disable=broad-except
         print(f"Error inserting user into database: {e}")
         return None
+
+def get_litigations():
+    """
+    get all litigations from database
+    """
+    try:
+        response = client.table("litigations").select("*").execute()
+        return response.data
+    except Exception as e: # pylint: disable=broad-except
+        print(f"Error getting all litigations: {e}")
+        return None

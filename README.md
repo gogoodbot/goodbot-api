@@ -1,5 +1,20 @@
 ## GoodBot API Backend Application
-A FastAPI application for the GoodBot Project.
+A backend application for the GoodBot Project written in Python using the FastAPI framework.
+
+### Prerequisites
+- Python 3.10
+- pip
+- FastAPI
+
+### Project Structure
+```
+goodbot-api
+├── main.py
+├── model
+│   ├── data models
+├── route
+│   ├── api routes/endpoints
+```
 
 ### Installation
 1. Install [Python](https://www.python.org/downloads/)

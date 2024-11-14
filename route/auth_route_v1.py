@@ -48,7 +48,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
         expire = datetime.now(timezone.utc) + timedelta(minutes=30)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(
-        to_encode, 
+        to_encode,
         os.environ.get("SECRET_KEY"),
         algorithm=os.environ.get("ALGORITHM")
     )
@@ -82,7 +82,7 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> T
         print(f"Error logging in: {e}")
         return {"message": "Invalid username or password"}
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+async def get_current_active_user(token: Annotated[str, Depends(oauth2_scheme)]):
     """
     get current user from database using bearer token
     """
@@ -94,7 +94,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     try:
         payload = jwt.decode(
             token,
-            os.environ.get("SECRET_KEY"), 
+            os.environ.get("SECRET_KEY"),
             algorithms=[os.environ.get("ALGORITHM")]
         )
         token_username: str = payload.get("sub")
