@@ -14,7 +14,7 @@ router = APIRouter(
     responses={404: {"description": "Not found"}}
 )
 
-@router.post("/")
+@router.get("/")
 async def fetch_litigations(current_user: Annotated[User, Depends(get_current_active_user)]):
     """
     retrieve all litigations from database

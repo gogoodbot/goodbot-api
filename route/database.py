@@ -53,7 +53,7 @@ def get_litigations():
     get all litigations from database
     """
     try:
-        response = client.table("litigations").select("*").execute()
+        response = client.table("Litigation").select("*").execute()
         return response.data
     except Exception as e: # pylint: disable=broad-except
         print(f"Error getting all litigations: {e}")

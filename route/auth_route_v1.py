@@ -70,7 +70,7 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> T
                     headers={"WWW-Authenticate": "Bearer"},
                 )
             access_token_expires = timedelta(
-                minutes=int(os.environ.get("ACCESS_TOKEN_EXPIRE_HOURS"))
+                milliseconds=int(os.environ.get("ACCESS_TOKEN_EXPIRE_MILLISECONDS"))
             )
             access_token = create_access_token(
                 data={"sub": form_data.username}, expires_delta=access_token_expires
