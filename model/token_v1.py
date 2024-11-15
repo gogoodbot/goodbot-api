@@ -3,6 +3,7 @@ auth token model
 """
 from pydantic import BaseModel
 
+
 class Token(BaseModel):
     """
     auth token model

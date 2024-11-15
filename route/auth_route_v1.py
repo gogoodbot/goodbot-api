@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 import os
 from typing import Annotated
 import jwt
-from jwt.exceptions import InvalidTokenError
+from jwt.exceptions import InvalidTokenError, ExpiredSignatureError
 import bcrypt
 from fastapi import APIRouter, Depends, status, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
@@ -21,6 +21,7 @@ router = APIRouter(
     responses={404: {"description": "Not found"}}
 )
 
+
 def authenticate_user(username: str, password: str):
     """
     verify if user exists in the database and check if password matches the hashed password
@@ -33,9 +34,10 @@ def authenticate_user(username: str, password: str):
             return True
 
         return False
-    except Exception as e: # pylint: disable=broad-except
+    except Exception as e:  # pylint: disable=broad-except
         print(f"Error verifying user: {e}")
         return {"exception": "Invalid username or password"}
+
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     """
@@ -54,6 +56,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     )
     return encoded_jwt
 
+
 @router.post("/")
 async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> Token:
     """
@@ -62,7 +65,8 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> T
     """
     try:
         if user_exists(value=form_data.username):
-            user_authenticated = authenticate_user(form_data.username, form_data.password)
+            user_authenticated = authenticate_user(
+                form_data.username, form_data.password)
             if not user_authenticated:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -70,7 +74,8 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> T
                     headers={"WWW-Authenticate": "Bearer"},
                 )
             access_token_expires = timedelta(
-                milliseconds=int(os.environ.get("ACCESS_TOKEN_EXPIRE_MILLISECONDS"))
+                milliseconds=int(os.environ.get(
+                    "ACCESS_TOKEN_EXPIRE_MILLISECONDS"))
             )
             access_token = create_access_token(
                 data={"sub": form_data.username}, expires_delta=access_token_expires
@@ -78,17 +83,23 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> T
             return Token(access_token=access_token, token_type="bearer")
 
         return {"message": "Invalid username or password"}
-    except Exception as e: # pylint: disable=broad-except
+    except Exception as e:  # pylint: disable=broad-except
         print(f"Error logging in: {e}")
         return {"message": "Invalid username or password"}
 
-async def get_current_active_user(token: Annotated[str, Depends(oauth2_scheme)]):
+
+async def verify_access_token(token: Annotated[str, Depends(oauth2_scheme)]):
     """
     get current user from database using bearer token
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    expired_token_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Token has expired",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
@@ -100,9 +111,8 @@ async def get_current_active_user(token: Annotated[str, Depends(oauth2_scheme)])
         token_username: str = payload.get("sub")
         if token_username is None:
             raise credentials_exception
+        return payload
+    except ExpiredSignatureError as e:
+        raise expired_token_exception from e
     except InvalidTokenError as e:
         raise credentials_exception from e
-    user = get_user_by_username(token_username)
-    if user is None:
-        raise credentials_exception
-    return user
