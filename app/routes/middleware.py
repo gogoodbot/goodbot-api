@@ -9,7 +9,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.routes.auth_route_v1 import verify_access_token
 
 
-class AuthMiddleware(BaseHTTPMiddleware):
+class AuthMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-public-methods
     """
     authentication middleware
     """
