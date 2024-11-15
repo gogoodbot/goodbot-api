@@ -4,7 +4,7 @@ litigations data operations route v1
 
 from typing import Annotated
 from fastapi import APIRouter, Depends
-from model.user_v1 import User
+from app.model.user_v1 import User
 from .auth_route_v1 import verify_access_token
 from .database import get_litigations
 

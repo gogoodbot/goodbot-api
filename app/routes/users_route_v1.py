@@ -5,8 +5,8 @@ user data operations module v1
 from typing import Annotated
 import bcrypt
 from fastapi import APIRouter, Depends
-from model.create_user_request_v1 import CreateUserRequest
-from model.user_v1 import User
+from app.model.create_user_request_v1 import CreateUserRequest
+from app.model.user_v1 import User
 from .auth_route_v1 import verify_access_token
 from .database import get_user_by_username, user_exists, insert_user
 

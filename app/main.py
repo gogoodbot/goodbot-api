@@ -3,8 +3,9 @@ main module
 """
 
 from fastapi import FastAPI
-from route import auth_route_v1, litigations_route_v1, users_route_v1
-from route.middleware import AuthMiddleware
+from .routes import auth_route_v1, litigations_route_v1, users_route_v1
+from .routes.middleware import AuthMiddleware
+
 
 def create_app():
     """
@@ -18,6 +19,7 @@ def create_app():
     fastapi.include_router(litigations_route_v1.router)
     fastapi.include_router(litigations_route_v1.router, prefix="/v1")
     return fastapi
+
 
 app = create_app()
 

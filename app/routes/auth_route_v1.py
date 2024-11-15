@@ -10,7 +10,7 @@ from jwt.exceptions import InvalidTokenError, ExpiredSignatureError
 import bcrypt
 from fastapi import APIRouter, Depends, status, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
-from model.token_v1 import Token
+from app.model.token_v1 import Token
 from .database import user_exists, get_user_by_username
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -60,32 +60,40 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 @router.post("/")
 async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> Token:
     """
-    verify if user exists in the database, check if password matches the stored hashed password, 
+    verify if user exists in the database, check if password matches the stored hashed password,
     authenticate user and return a token
     """
-    try:
-        if user_exists(value=form_data.username):
-            user_authenticated = authenticate_user(
-                form_data.username, form_data.password)
-            if not user_authenticated:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Incorrect username or password",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-            access_token_expires = timedelta(
-                milliseconds=int(os.environ.get(
-                    "ACCESS_TOKEN_EXPIRE_MILLISECONDS"))
-            )
-            access_token = create_access_token(
-                data={"sub": form_data.username}, expires_delta=access_token_expires
-            )
-            return Token(access_token=access_token, token_type="bearer")
+    if not user_exists(value=form_data.username):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-        return {"message": "Invalid username or password"}
+    user_authenticated = authenticate_user(
+        form_data.username, form_data.password)
+    if not user_authenticated:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    try:
+        access_token_expires = timedelta(
+            milliseconds=int(os.environ.get(
+                "ACCESS_TOKEN_EXPIRE_MILLISECONDS"))
+        )
+        access_token = create_access_token(
+            data={"sub": form_data.username}, expires_delta=access_token_expires
+        )
+        return Token(access_token=access_token, token_type="bearer")
     except Exception as e:  # pylint: disable=broad-except
         print(f"Error logging in: {e}")
-        return {"message": "Invalid username or password"}
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        ) from e
 
 
 async def verify_access_token(token: Annotated[str, Depends(oauth2_scheme)]):
