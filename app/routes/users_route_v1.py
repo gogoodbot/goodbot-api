@@ -2,7 +2,7 @@
 user data operations module v1
 """
 
-from typing import Annotated
+from typing import Annotated, Dict, Any
 import bcrypt
 from fastapi import APIRouter, Depends
 from app.model.create_user_request_v1 import CreateUserRequest
@@ -48,7 +48,7 @@ async def create_user(user: CreateUserRequest):
 
 
 @router.get("/me", response_model=User)
-async def get_user(access_token: Annotated[User, Depends(verify_access_token)]):
+async def get_user(access_token: Annotated[Dict[str, Any], Depends(verify_access_token)]):
     """
     get user from database by username
     """

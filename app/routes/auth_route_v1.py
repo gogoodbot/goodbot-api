@@ -4,7 +4,7 @@ user auth operations module v1
 
 from datetime import datetime, timedelta, timezone
 import os
-from typing import Annotated
+from typing import Annotated, Dict, Any
 import jwt
 from jwt.exceptions import InvalidTokenError, ExpiredSignatureError
 import bcrypt
@@ -96,7 +96,7 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> T
         ) from e
 
 
-async def verify_access_token(token: Annotated[str, Depends(oauth2_scheme)]):
+async def verify_access_token(token: Annotated[str, Depends(oauth2_scheme)]) -> Dict[str, Any]:
     """
     get current user from database using bearer token
     """

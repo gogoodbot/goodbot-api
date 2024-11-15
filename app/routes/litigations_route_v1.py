@@ -2,9 +2,8 @@
 litigations data operations route v1
 """
 
-from typing import Annotated
+from typing import Annotated, Dict, Any
 from fastapi import APIRouter, Depends
-from app.model.user_v1 import User
 from .auth_route_v1 import verify_access_token
 from .database import get_litigations
 
@@ -16,7 +15,7 @@ router = APIRouter(
 
 
 @router.get("/")
-async def fetch_litigations(access_token: Annotated[User, Depends(verify_access_token)]):
+async def fetch_litigations(_: Annotated[Dict[str, Any], Depends(verify_access_token)]):
     """
     retrieve all litigations from database
     """
