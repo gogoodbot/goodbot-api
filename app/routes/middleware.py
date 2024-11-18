@@ -26,7 +26,6 @@ class AuthMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-public-meth
 
         # check if access token is validn
         try:
-            print(f"Access token: {access_token}")
             access_token = await verify_access_token(access_token)
             if access_token:
                 return await call_next(request)

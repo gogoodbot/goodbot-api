@@ -110,6 +110,7 @@ async def verify_access_token(token: Annotated[str, Depends(oauth2_scheme)]) -> 
         detail="Token has expired",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
     try:
         payload = jwt.decode(
             token,
@@ -121,6 +122,11 @@ async def verify_access_token(token: Annotated[str, Depends(oauth2_scheme)]) -> 
             raise credentials_exception
         return payload
     except ExpiredSignatureError as e:
+        print(f"JWT expired signature error: {e}")
         raise expired_token_exception from e
     except InvalidTokenError as e:
+        print(f"JWT decoding error: {e}")
         raise credentials_exception from e
+    except Exception as e:  # pylint: disable=broad-except
+        print(f"Error verifying access token: {e}")
+        return {"exception": "Unknown error with token"}
