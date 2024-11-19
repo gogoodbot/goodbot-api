@@ -93,7 +93,7 @@ def test_get_litigations(mock_client):
     result = get_litigations()
     assert result == []
 
-    # Mock response for a database error
+    # mock response for a database error
     mock_client.table.return_value.select.return_value.execute.side_effect = Exception(
         "Database error")
     result = get_litigations()
