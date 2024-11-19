@@ -10,7 +10,6 @@ from fastapi.testclient import TestClient
 from fastapi import HTTPException
 from app.main import app
 
-# test client for FastAPI
 client = TestClient(app)
 
 
@@ -27,10 +26,12 @@ def mock_dependencies(mocker):
                       "password": "hashed_pw",
                       "active": 1}
     )
+
+    # simulate a valid token
     mocker.patch(
         "app.routes.auth_route_v1.verify_access_token",
         return_value={"sub": "testuser"}
-    )  # simulate a valid token
+    )
 
 
 def test_create_user(mock_dependencies):
@@ -49,7 +50,7 @@ def test_create_user_already_exists(mock_dependencies, mocker):
     """
     Test user creation when the user already exists.
     """
-    # Mock `user_exists` to simulate the user already exists
+    # mock `user_exists` to simulate the user already exists
     mocker.patch("app.routes.users_route_v1.user_exists", return_value=True)
 
     user_data = {"username": "existinguser", "password": "password123"}
@@ -64,31 +65,30 @@ def test_get_user(mock_dependencies, mocker):
     """
     test fetching the user info using a valid access token.
     """
-    # Mock environment variables
+    # mock environment variables
     mocker.patch.dict(
         os.environ, {"SECRET_KEY": "testsecret", "ALGORITHM": "HS256"}
     )
 
-    # Create a valid JWT for testing
+    # create a valid JWT for testing
     secret_key = "testsecret"
     algorithm = "HS256"
     payload = {"sub": "testuser", "exp": datetime.utcnow() +
                timedelta(minutes=5)}
     valid_token = jwt.encode(payload, secret_key, algorithm=algorithm)
 
-    # Patch the verify_access_token function to return a valid payload
+    # patch the verify_access_token function to return a valid payload
     mocker.patch(
         "app.routes.users_route_v1.verify_access_token",
         return_value=payload
     )
 
-    # Perform the request with the valid token
+    # perform the request with the valid token
     response = client.get(
         "/users/me",
         headers={"Authorization": f"Bearer {valid_token}"}
     )
 
-    # Assertions
     assert response.status_code == 200
     assert response.json()["username"] == "testuser"
 
