@@ -8,8 +8,8 @@
   ],
   "routes": [
     {
-      "src": "/login",
-      "dest": "app/routes/auth_route_v1.py"
+      "src": "/(.*)",
+      "dest": "app/main.py"
     }
   ]
 }
