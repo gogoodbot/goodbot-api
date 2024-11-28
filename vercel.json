@@ -1,5 +1,4 @@
 {
-  "devCommand": "pytest tests/unit_tests -v -s",
   "version": 2,
   "builds": [
     {
