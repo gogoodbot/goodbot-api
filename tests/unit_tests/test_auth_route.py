@@ -9,8 +9,8 @@ from jwt.exceptions import InvalidTokenError
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
-from app.main import app  # Replace with your FastAPI app import
-from app.routes.auth_route_v1 import create_access_token, verify_access_token
+from api.main import app  # Replace with your FastAPI app import
+from api.routes.auth_route_v1 import create_access_token, verify_access_token
 
 load_dotenv()
 

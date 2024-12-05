@@ -4,7 +4,7 @@ database operations unit tests
 
 from unittest.mock import MagicMock
 import pytest
-from app.routes.database import user_exists, get_user_by_username, insert_user, get_litigations
+from api.routes.database import user_exists, get_user_by_username, insert_user, get_litigations
 
 
 @pytest.fixture
