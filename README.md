@@ -4,7 +4,7 @@ A backend application for the GoodBot Project written in Python using the FastAP
 
 ### Prerequisites
 
-- Python 3.10
+- Python 3.12
 - pip
 - FastAPI
 - pytest
@@ -13,7 +13,7 @@ A backend application for the GoodBot Project written in Python using the FastAP
 
 ```
 goodbot-api
-├── app
+├── api
 │   ├── main.py
 │   ├── model
 │   │   ├── data models
@@ -34,7 +34,7 @@ goodbot-api
 ### Running the Application Locally
 
 1. Activate the virtual environment via `source [virtual_environment_name]/bin/activate`
-2. Run the application via `fastapi dev main.py`
+2. Run the application via `fastapi dev api/main.py`
 3. The application should be available at `http://127.0.0.1:8000`
 4. To stop the application, press `Ctrl + C`
 

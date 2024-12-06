@@ -7,7 +7,7 @@ import pytest
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from fastapi.responses import JSONResponse
-from app.routes.middleware import AuthMiddleware
+from api.routes.middleware import AuthMiddleware
 
 
 @pytest.fixture
