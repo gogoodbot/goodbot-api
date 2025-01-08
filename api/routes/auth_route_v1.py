@@ -10,7 +10,7 @@ from jwt.exceptions import InvalidTokenError, ExpiredSignatureError
 import bcrypt
 from fastapi import APIRouter, Depends, status, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
-from app.model.token_v1 import Token
+from api.model.token_v1 import Token
 from .database import user_exists, get_user_by_username
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
