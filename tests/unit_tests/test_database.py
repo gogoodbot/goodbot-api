@@ -13,7 +13,7 @@ def mock_client(mocker):
     mock the client object
     """
     # mock the client.table().select().execute() chain
-    mock_db_client = mocker.patch("app.routes.database.client", autospec=True)
+    mock_db_client = mocker.patch("api.routes.database.client", autospec=True)
     return mock_db_client
 
 
