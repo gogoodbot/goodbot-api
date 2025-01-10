@@ -45,17 +45,15 @@ goodbot-api
 
 ### Running the Application with Docker
 
-To run the application using Docker, use the following command to build and run the Docker container in one step:
+To run the application in production mode, use the following command:
 
 ```bash
-sudo docker build -t goodbot_api . && sudo docker run -p 8000:8000 --rm --env-file .env goodbot_api
+sudo docker build -t api . && sudo docker run -d -p 80:80 --env-file .env api
 ```
 
 This command will:
 
-- **Build the Docker image** tagged as `goodbot_api`.
-- **Run the container**, mapping port `8000` of the container to port `8000` on the host machine.
-- **Remove the container after stopping** (`--rm`). This is useful for testing as it deletes the container once it finishes running. If you want to run it in production, omit the `--rm` flag.
-- **Use environment variables** from the `.env` file.
-  The application will now be available at `http://localhost:8000`.
-  If you encounter issues with port `8000`, it may be because the port is already in use. In that case, you can change the port in the `Dockerfile` to a different one.
+- Build the Docker image tagged as api.
+- Run the container in detached mode (-d), ensuring it continues running in the background.
+- Use environment variables from the .env file.
+- The application will now be available at http://localhost:80 or http://127.0.0.1:80.
