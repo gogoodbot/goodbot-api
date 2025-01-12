@@ -22,12 +22,12 @@ def test_login_success(mocker):
     """
     Mock database responses
     """
-    mocker.patch("app.routes.auth_route_v1.user_exists", return_value=True)
-    mocker.patch("app.routes.auth_route_v1.get_user_by_username", return_value={
+    mocker.patch("api.routes.auth_route_v1.user_exists", return_value=True)
+    mocker.patch("api.routes.auth_route_v1.get_user_by_username", return_value={
                  "password": bcrypt.hashpw(b"test", bcrypt.gensalt()).decode()})
 
     response = client.post(
-        "/login/",
+        "/v1/login/",
         data={"username": "testuser", "password": "test"}
     )
     assert response.status_code == 200
@@ -38,10 +38,10 @@ def test_login_failure_invalid_credentials(mocker):
     """
     test login failure with invalid credentials
     """
-    mocker.patch("app.routes.auth_route_v1.user_exists", return_value=False)
+    mocker.patch("api.routes.auth_route_v1.user_exists", return_value=False)
 
     response = client.post(
-        "/login",
+        "/v1/login",
         data={"username": "invaliduser", "password": "invalid"}
     )
     assert response.status_code == 401
@@ -64,7 +64,7 @@ async def test_verify_access_token_valid(mocker):
     """
     test verify access token
     """
-    mocker.patch("app.routes.auth_route_v1.jwt.decode",
+    mocker.patch("api.routes.auth_route_v1.jwt.decode",
                  return_value={"sub": "testuser"})
     payload = await verify_access_token("testtoken")
     assert payload["sub"] == "testuser"
@@ -75,7 +75,7 @@ async def test_verify_access_token_invalid(mocker):
     """
     test verify access token with invalid token
     """
-    mocker.patch("app.routes.auth_route_v1.jwt.decode",
+    mocker.patch("api.routes.auth_route_v1.jwt.decode",
                  side_effect=InvalidTokenError)
     with pytest.raises(HTTPException) as excinfo:
         await verify_access_token("invalid.token")
