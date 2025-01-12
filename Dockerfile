@@ -2,11 +2,9 @@ FROM python:3.12-slim
 
 RUN apt update -y && apt install -y curl git python3-pip && apt clean && rm -rf /var/lib/apt/lists/*
 
-RUN python3 -m pip install --upgrade pip
-
 COPY . .
 
-RUN python3 -m pip install --no-cache-dir --upgrade -r /requirements.txt
+RUN python3 -m pip install --no-cache-dir --upgrade pip && python3 -m pip install --no-cache-dir --upgrade -r /requirements.txt
 
 EXPOSE 80
 
