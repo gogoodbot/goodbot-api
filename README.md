@@ -42,3 +42,18 @@ goodbot-api
 
 1. Activate the virtual environment via `source [virtual_environment_name]/bin/activate`
 2. Run the unit tests via `pytest tests/unit_tests`
+
+### Running the Application with Docker
+
+To run the application in production mode, use the following command:
+
+```bash
+sudo docker build -t api . && sudo docker run -d -p 80:80 --env-file .env api
+```
+
+This command will:
+
+- Build the Docker image tagged as api.
+- Run the container in detached mode (-d), ensuring it continues running in the background.
+- Use environment variables from the .env file.
+- The application will now be available at http://localhost:80 or http://127.0.0.1:80.
