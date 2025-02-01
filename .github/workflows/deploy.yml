@@ -27,6 +27,9 @@ jobs:
         run: |
           echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> $GITHUB_ENV
           echo "DATABASE_API_KEY=${{ secrets.DATABASE_API_KEY }}" >> $GITHUB_ENV
+          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> $GITHUB_ENV
+          echo "ALGORITHM=${{ secrets.ALGORITHM }}" >> $GITHUB_ENV
+          echo "ACCESS_TOKEN_EXPIRE_MILLISECONDS=${{ secrets.ACCESS_TOKEN_EXPIRE_MILLISECONDS }}" >> $GITHUB_ENV
 
       - name: Run tests
         run: pytest
