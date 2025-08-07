@@ -5,7 +5,7 @@ litigations data operations route v1
 from typing import Annotated, Dict, Any
 from fastapi import APIRouter, Depends
 from .auth_route_v1 import verify_access_token
-from .database import get_litigations
+from .database import DatabaseRepository
 
 router = APIRouter(
     prefix="/litigations",
@@ -13,14 +13,21 @@ router = APIRouter(
     responses={404: {"description": "Not found"}}
 )
 
+def get_database_repository() -> DatabaseRepository:
+    """
+    dependency to get the DatabaseRepository instance.
+    This allows for easy testing and mocking of the repository.
+    """
+    return DatabaseRepository()
+
 
 @router.get("/")
-async def fetch_litigations(_: Annotated[Dict[str, Any], Depends(verify_access_token)]):
+async def fetch_litigations(_: Annotated[Dict[str, Any], Depends(verify_access_token)], repository: DatabaseRepository = Depends(get_database_repository)):
     """
     retrieve all litigations from database
     """
     try:
-        litigations = get_litigations()
+        litigations = repository.get_litigations()
         return {"data": litigations}
     except Exception as e:  # pylint: disable=broad-except
         print(f"Error fetching litigations: {e}")
