@@ -18,9 +18,7 @@ class GetHomePageData:
             # iterate through each subfactor, fetch harms and risks by id and add them as a list of objects
             # to the subfactor object
             if not subfactors:
-                return {
-                    "message": "No structural subfactors found"
-                }
+                return {"message": "No structural subfactors found"}
             for subfactor in subfactors:
                 harms_and_risks = await self.repository.get_harm_and_risk_by_subfactor_id(subfactor["id"])
                 if harms_and_risks:
@@ -48,6 +46,4 @@ class GetHomePageData:
             return HomePageData(subfactors=subfactors)
         except Exception as e:
             print(f"Error fetching home page data: {e}")
-            return {
-                "message": "Error fetching home page data"
-            }
+            return {"message": "Error fetching home page data"}

@@ -39,11 +39,11 @@ async def get_home_page(usecase: GetHomePageData = Depends(get_homepage_data)):
         data = await usecase.execute()
         # If the data is None, return a message
         if data is None:
-            return {"message": "No structural subfactors found"}
+            return {"message": "No homepage data found"}
         elif not isinstance(data, HomePageData):
             return {"message": "Data is not in the expected format. Current type: " + str(type(data)) + " .. expected type: HomePageData"}
 
         return data
     except Exception as e:  # pylint: disable=broad-except
-        print(f"Error fetching structural subfactors: {e}")
-        return {"message": "Error fetching structural subfactors"}
+        print(f"Error fetching homepage data: {e}")
+        return {"message": "Error fetching homepage data"}
