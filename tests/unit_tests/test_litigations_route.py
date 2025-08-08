@@ -22,7 +22,7 @@ def mock_dependencies(mocker):
         "api.routes.litigations_route_v1.verify_access_token",
         return_value={"sub": "testuser"}
     )
-    mocker.patch("api.routes.litigations_route_v1.get_litigations")
+    mocker.patch("api.routes.litigations_route_v1.DatabaseRepository.get_litigations")
 
 
 def test_fetch_litigations_valid_token(mock_dependencies, mocker):
@@ -49,7 +49,7 @@ def test_fetch_litigations_valid_token(mock_dependencies, mocker):
 
     # mock get_litigations to return dummy data
     mock_litigations = [{"id": 1, "case_name": "Test Case"}]
-    mocker.patch("api.routes.litigations_route_v1.get_litigations",
+    mocker.patch("api.routes.litigations_route_v1.DatabaseRepository.get_litigations",
                  return_value=mock_litigations)
 
     # perform request
@@ -109,7 +109,7 @@ def test_fetch_litigations_db_error(mock_dependencies, mocker):
 
     # mock get_litigations to raise an exception
     mocker.patch(
-        "api.routes.litigations_route_v1.get_litigations",
+        "api.routes.litigations_route_v1.DatabaseRepository.get_litigations",
         side_effect=Exception("Database error")
     )
 
