@@ -52,7 +52,6 @@ def test_get_home_page_data(mocker, mock_database_repository, mock_usecase):
     result = get_homepage_data()
     assert result == mock_usecase
 
-@pytest.mark.asyncio
 def test_home_page_data_error(mocker, mock_database_repository, mock_usecase):
     """
     Test error handling in get_homepage_data

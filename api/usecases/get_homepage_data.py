@@ -37,8 +37,20 @@ class GetHomePageData:
                                 entities += entity
                         harm_and_risk["nonprofits"] = entities
 
+                    # fetch experts by harm and risk id and iterate through to get experts
+                    experts_and_harm_risks = await self.repository.get_experts_by_harm_risk_id(harm_and_risk["id"])
+                    print(f"Experts and harm risks fetched: {experts_and_harm_risks} for harm and risk id: {harm_and_risk['id']}")
+                    if experts_and_harm_risks:
+                        experts = []
+                        for expert_and_harm_risk in experts_and_harm_risks:
+                            expert = await self.repository.get_expert_by_id(expert_and_harm_risk["expert_id"])
+                            print(f"Expert fetched: {expert} for harm and risk id: {harm_and_risk['id']}")
+                            if expert:
+                                experts.append(expert)
+                        harm_and_risk["experts"] = experts
+
+
                     # TODO: fetch experts, litigations, policies and resources for each harm and risk and add each of them as objects/keys to harms and risks object
-                    # harm_and_risk["experts"] = self.repository.get_experts_by_harm_and_risk_id(harm_and_risk["id"])
                     # harm_and_risk["litigations"] = self.repository.get_litigations_by_harm_and_risk_id(harm_and_risk["id"])
                     # harm_and_risk["policies"] = self.repository.get_policies_by_harm_and_risk_id(harm_and_risk["id"])
                     # harm_and_risk["resources"] = self.repository.get_resources_by_harm_and_risk_id(harm_and_risk["id"])

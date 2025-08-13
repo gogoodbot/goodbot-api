@@ -90,7 +90,9 @@ class DatabaseRepository:
 
     async def get_harm_and_risk_by_subfactor_id(self, subfactor_id: str):
         """
-        get harm and risk by id from database
+        get harm and risk by subfactor id from database
+        :param subfactor_id: the id of the structural subfactor
+        :return: list of harms and risks associated with the subfactor
         """
         try:
             response = self.client.table("harms_and_risks").select("*").eq("structural_sub_factor_id",subfactor_id).execute()
@@ -99,12 +101,18 @@ class DatabaseRepository:
             print(f"Error getting harm and risk by id: {e}")
             return None
 
-    async def get_nonprofits_by_harm_risk_id(self, harm_risk_id: str):
+    async def get_nonprofits_by_harm_risk_id(self, harm_risk_id: str, page_number: int = 1, page_size: int = 4):
         """
-        get entity by given nonprofit id from database
+        get nonprofit by given harm and risk id from nonprofits_and_harmsrisks reference/join table in database. Handles pagination.
+        :param harm_risk_id: the id of the harm and risk
+        :param page_number: the page number to fetch
+        :param page_size: the number of items per page
+        :return: list of nonprofits associated with the harm and risk
         """
         try:
-            response = self.client.table("nonprofits_and_harmrisks").select("*").eq("harm_risk_id",harm_risk_id).execute()
+            response = self.client.table("nonprofits_and_harmrisks").select("*").eq("harm_risk_id", harm_risk_id).range(
+                (page_number - 1) * page_size, page_number * page_size - 1
+            ).execute()
             return response.data
         except Exception as e:  # pylint: disable=broad-except
             print(f"Error getting entity by nonprofit id: {e}")
@@ -113,6 +121,8 @@ class DatabaseRepository:
     async def get_entity_by_nonprofit_id(self, nonprofit_id: str):
         """
         get entity by given nonprofit id from database
+        :param nonprofit_id: the id of the nonprofit
+        :return: entity data or None if not found
         """
         try:
             response = self.client.table("nonprofits").select("entity_id").eq("id", nonprofit_id).execute()
@@ -128,7 +138,10 @@ class DatabaseRepository:
 
     def get_nonprofits(self, page_number: int = 1, page_size: int = 4):
         """
-        get nonprofits from database with paginagion
+        get nonprofits from database. Handles pagination.
+        :param page_number: the page number to fetch
+        :param page_size: the number of items per page
+        :return: list of nonprofits
         """
         try:
             response = self.client.table("nonprofits").select("*").range(
@@ -137,4 +150,38 @@ class DatabaseRepository:
             return response.data
         except Exception as e:  # pylint: disable=broad-except
             print(f"Error getting all nonprofits: {e}")
+            return None
+
+    async def get_experts_by_harm_risk_id(self, harm_risk_id: str, page_number: int = 1, page_size: int = 4):
+        """
+        get expert by given nonprofit id from database. Handles pagination.
+        :param harm_risk_id: the id of the harm and risk
+        :param page_number: the page number to fetch
+        :param page_size: the number of items per page
+        :return: list of experts associated with the harm and risk
+        """
+        try:
+            response = self.client.table("experts_and_harmrisks").select("*").eq("harm_risk_id", harm_risk_id).range(
+                (page_number - 1) * page_size, page_number * page_size - 1
+            ).execute()
+            return response.data
+        except Exception as e:  # pylint: disable=broad-except
+            print(f"Error getting entity by nonprofit id: {e}")
+            return None
+
+    async def get_expert_by_id(self, expert_id: str, page_number: int = 1, page_size: int = 4):
+        """
+        get expert by given expert id from database. Handles pagination.
+        :param expert_id: the id of the expert
+        :param page_number: the page number to fetch
+        :param page_size: the number of items per page
+        :return: list of experts associated with the harm and risk
+        """
+        try:
+            response = self.client.table("experts").select("*").eq("id", expert_id).range(
+                (page_number - 1) * page_size, page_number * page_size - 1
+            ).execute()
+            return response.data
+        except Exception as e:  # pylint: disable=broad-except
+            print(f"Error getting entity by nonprofit id: {e}")
             return None
