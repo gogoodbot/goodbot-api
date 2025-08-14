@@ -4,8 +4,8 @@ main module
 
 from fastapi import FastAPI
 
-from .routes import auth_route_v1, litigations_route_v1, users_route_v1, home_route_v1, experts_route_v1
-from .routes.middleware import AuthMiddleware
+from api.routes import auth_route_v1, litigations_route_v1, users_route_v1, home_route_v1, experts_route_v1
+from api.routes.middleware import AuthMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 
 origins = [
