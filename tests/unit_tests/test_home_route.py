@@ -5,7 +5,7 @@ home route unit tests
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from fastapi.testclient import TestClient
-from api.main import app
+from main import app
 from api.routes.home_route_v1 import get_homepage_data
 from api.routes.database import DatabaseRepository
 from api.usecases.get_homepage_data import GetHomePageData
