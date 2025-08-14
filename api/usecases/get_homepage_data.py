@@ -39,12 +39,10 @@ class GetHomePageData:
 
                     # fetch experts by harm and risk id and iterate through to get experts
                     experts_and_harm_risks = await self.repository.get_experts_by_harm_risk_id(harm_and_risk["id"])
-                    print(f"Experts and harm risks fetched: {experts_and_harm_risks} for harm and risk id: {harm_and_risk['id']}")
                     if experts_and_harm_risks:
                         experts = []
                         for expert_and_harm_risk in experts_and_harm_risks:
                             expert = await self.repository.get_expert_by_id(expert_and_harm_risk["expert_id"])
-                            print(f"Expert fetched: {expert} for harm and risk id: {harm_and_risk['id']}")
                             if expert:
                                 experts.append(expert)
                         harm_and_risk["experts"] = experts

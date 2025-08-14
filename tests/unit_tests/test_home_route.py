@@ -64,5 +64,4 @@ def test_home_page_data_error(mocker, mock_database_repository, mock_usecase):
 
     response = client.get("/v1/home")
     assert response.status_code == 200
-    print(f"Response: {response.json()}")
     assert response.json()["message"] == "Error fetching homepage data"
