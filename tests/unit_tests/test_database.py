@@ -104,3 +104,51 @@ def test_get_litigations(mock_client, repository):
         "Database error")
     result = repository.get_litigations()
     assert result is None
+
+@pytest.mark.asyncio
+async def test_get_experts(mock_client, repository):
+    """
+    test get_experts function
+    """
+    # mock response for experts
+    mock_client.table.return_value.select.return_value.range.return_value.execute.return_value = \
+        MagicMock(data=[{"id": 1, "name": "Expert A"}, {"id": 2, "name": "Expert B"}])
+
+    result = await repository.get_experts(page_number=1, page_size=10)
+    assert sorted(result, key=lambda d: d["id"]) == sorted([{"id": 1, "name": "Expert A"}, {"id": 2, "name": "Expert B"}], key=lambda d: d["id"])
+
+    # mock response for an empty database
+    mock_client.table.return_value.select.return_value.range.return_value.execute.return_value = \
+        MagicMock(data=[])
+    result = await repository.get_experts(page_number=1, page_size=10)
+    assert result == []
+
+    # mock response for a database error
+    mock_client.table.return_value.select.return_value.range.return_value.execute.side_effect = Exception(
+        "Database error")
+    result = await repository.get_experts(page_number=1, page_size=10)
+    assert result is None
+
+@pytest.mark.asyncio
+async def test_get_expert_by_id(mock_client, repository):
+    """
+    test get_expert_by_id function
+    """
+    # mock response for a valid expert
+    mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = \
+        MagicMock(data={"id": "expert1", "name": "Expert One"})
+
+    result = await repository.get_expert_by_id("expert1")
+    assert result == {"id": "expert1", "name": "Expert One"}
+
+    # mock response for a nonexistent expert
+    mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = \
+        MagicMock(data=[])
+    result = await repository.get_expert_by_id("nonexistent_expert")
+    assert len(result) == 0
+
+    # mock response for a database error
+    mock_client.table.return_value.select.return_value.eq.return_value.execute.side_effect = Exception(
+        "Database error")
+    result = await repository.get_expert_by_id("expert1")
+    assert result is None
