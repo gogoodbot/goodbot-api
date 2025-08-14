@@ -4,7 +4,7 @@ main module
 
 from fastapi import FastAPI
 
-from .routes import auth_route_v1, litigations_route_v1, users_route_v1, home_route_v1
+from .routes import auth_route_v1, litigations_route_v1, users_route_v1, home_route_v1, experts_route_v1
 from .routes.middleware import AuthMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -23,6 +23,7 @@ def create_app():
     fastapi.include_router(users_route_v1.router, prefix="/v1")
     fastapi.include_router(litigations_route_v1.router, prefix="/v1")
     fastapi.include_router(home_route_v1.router, prefix="/v1")
+    fastapi.include_router(experts_route_v1.router, prefix="/v1")
     return fastapi
 
 

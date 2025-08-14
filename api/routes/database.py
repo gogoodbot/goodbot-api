@@ -3,6 +3,7 @@ database operations module
 """
 
 import os
+import random
 from supabase import Client, create_client
 from dotenv import load_dotenv
 
@@ -169,19 +170,32 @@ class DatabaseRepository:
             print(f"Error getting entity by nonprofit id: {e}")
             return None
 
-    async def get_expert_by_id(self, expert_id: str, page_number: int = 1, page_size: int = 4):
+    async def get_experts(self, page_number: int = 1, page_size: int = 10):
         """
-        get expert by given expert id from database. Handles pagination.
-        :param expert_id: the id of the expert
+        get experts from database. Handles pagination.
         :param page_number: the page number to fetch
         :param page_size: the number of items per page
-        :return: list of experts associated with the harm and risk
+        :return: list of experts
         """
         try:
-            response = self.client.table("experts").select("*").eq("id", expert_id).range(
+            response = self.client.table("experts").select("*").range(
                 (page_number - 1) * page_size, page_number * page_size - 1
             ).execute()
+            random.shuffle(response.data)  # Shuffle the experts listclient
             return response.data
         except Exception as e:  # pylint: disable=broad-except
-            print(f"Error getting entity by nonprofit id: {e}")
+            print(f"Error getting all experts: {e}")
+            return None
+
+    async def get_expert_by_id(self, expert_id: str):
+        """
+        get expert by given expert id from database
+        :param expert_id: the id of the expert
+        :return: expert data or None if not found
+        """
+        try:
+            response = self.client.table("experts").select("*").eq("id", expert_id).execute()
+            return response.data
+        except Exception as e:  # pylint: disable=broad-except
+            print(f"Error getting expert by id: {e}")
             return None

@@ -4,7 +4,6 @@ litigations route unit tests
 
 import os
 import datetime
-import pytest
 import jwt
 from fastapi.testclient import TestClient
 from fastapi import HTTPException
@@ -12,20 +11,7 @@ from api.main import app
 
 client = TestClient(app)
 
-
-@pytest.fixture
-def mock_dependencies(mocker):
-    """
-    Mock external dependencies for litigations route.
-    """
-    mocker.patch(
-        "api.routes.litigations_route_v1.verify_access_token",
-        return_value={"sub": "testuser"}
-    )
-    mocker.patch("api.routes.litigations_route_v1.DatabaseRepository.get_litigations")
-
-
-def test_fetch_litigations_valid_token(mock_dependencies, mocker):
+def test_fetch_litigations_valid_token(mocker):
     """
     test fetching litigations with a valid token.
     """
@@ -62,7 +48,7 @@ def test_fetch_litigations_valid_token(mock_dependencies, mocker):
     assert response.json() == {"data": mock_litigations}
 
 
-def test_fetch_litigations_invalid_token(mock_dependencies, mocker):
+def test_fetch_litigations_invalid_token(mocker):
     """
     test fetching litigations with an invalid token.
     """
@@ -85,7 +71,7 @@ def test_fetch_litigations_invalid_token(mock_dependencies, mocker):
     assert response.json()["detail"] == "Could not validate credentials"
 
 
-def test_fetch_litigations_db_error(mock_dependencies, mocker):
+def test_fetch_litigations_db_error(mocker):
     """
     Test fetching litigations with a database error.
     """
