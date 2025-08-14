@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends
 from api.model.create_user_request_v1 import CreateUserRequest
 from api.model.user_v1 import User
 from .auth_route_v1 import verify_access_token
-from .database import get_user_by_username, user_exists, insert_user
+from .database import DatabaseRepository
 
 router = APIRouter(
     prefix="/users",
@@ -16,9 +16,16 @@ router = APIRouter(
     responses={404: {"description": "Not found"}}
 )
 
+def get_database_repository() -> DatabaseRepository:
+    """
+    dependency to get the DatabaseRepository instance.
+    This allows for easy testing and mocking of the repository.
+    """
+    return DatabaseRepository()
+
 
 @router.post("/")
-async def create_user(user: CreateUserRequest):
+async def create_user(user: CreateUserRequest, repository: DatabaseRepository = Depends(get_database_repository)):
     """
     hash and salt password, check if user already exists, insert user into database
     """
@@ -31,11 +38,11 @@ async def create_user(user: CreateUserRequest):
             user.password.encode(), bcrypt.gensalt()).decode()
 
         # check if user already exists
-        if user_exists(value=username):
+        if repository.user_exists(value=username):
             return {"message": "User already exists"}
 
         # insert user into database
-        new_user = insert_user(username, hashed_password)
+        new_user = repository.insert_user(username, hashed_password)
 
         # check if user was inserted successfully
         if new_user:
@@ -48,13 +55,13 @@ async def create_user(user: CreateUserRequest):
 
 
 @router.get("/me", response_model=User)
-async def get_user(access_token: Annotated[Dict[str, Any], Depends(verify_access_token)]):
+async def get_user(access_token: Annotated[Dict[str, Any], Depends(verify_access_token)], repository: DatabaseRepository = Depends(get_database_repository)):
     """
     get user from database by username
     """
     try:
         token_username: str = access_token.get("sub")
-        user = get_user_by_username(token_username)
+        user = repository.get_user_by_username(token_username)
         if not user:
             return {"message": "Invalid access token. No username found in token."}
         return user

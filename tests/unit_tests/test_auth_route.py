@@ -22,8 +22,8 @@ def test_login_success(mocker):
     """
     Mock database responses
     """
-    mocker.patch("api.routes.auth_route_v1.user_exists", return_value=True)
-    mocker.patch("api.routes.auth_route_v1.get_user_by_username", return_value={
+    mocker.patch("api.routes.auth_route_v1.DatabaseRepository.user_exists", return_value=True)
+    mocker.patch("api.routes.auth_route_v1.DatabaseRepository.get_user_by_username", return_value={
                  "password": bcrypt.hashpw(b"test", bcrypt.gensalt()).decode()})
 
     response = client.post(
@@ -38,7 +38,7 @@ def test_login_failure_invalid_credentials(mocker):
     """
     test login failure with invalid credentials
     """
-    mocker.patch("api.routes.auth_route_v1.user_exists", return_value=False)
+    mocker.patch("api.routes.auth_route_v1.DatabaseRepository.user_exists", return_value=False)
 
     response = client.post(
         "/v1/login",

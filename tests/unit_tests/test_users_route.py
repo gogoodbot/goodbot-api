@@ -18,10 +18,10 @@ def mock_dependencies(mocker):
     """
     mocking the functions that interact with the database
     """
-    mocker.patch("api.routes.users_route_v1.user_exists", return_value=False)
-    mocker.patch("api.routes.users_route_v1.insert_user", return_value=True)
+    mocker.patch("api.routes.users_route_v1.DatabaseRepository.user_exists", return_value=False)
+    mocker.patch("api.routes.users_route_v1.DatabaseRepository.insert_user", return_value=True)
     mocker.patch(
-        "api.routes.users_route_v1.get_user_by_username",
+        "api.routes.users_route_v1.DatabaseRepository.get_user_by_username",
         return_value={"username": "testuser",
                       "password": "hashed_pw",
                       "active": 1}
@@ -51,7 +51,7 @@ def test_create_user_already_exists(mock_dependencies, mocker):
     Test user creation when the user already exists.
     """
     # mock `user_exists` to simulate the user already exists
-    mocker.patch("api.routes.users_route_v1.user_exists", return_value=True)
+    mocker.patch("api.routes.users_route_v1.DatabaseRepository.user_exists", return_value=True)
 
     user_data = {"username": "existinguser", "password": "password123"}
 

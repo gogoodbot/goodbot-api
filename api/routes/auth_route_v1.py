@@ -11,7 +11,7 @@ import bcrypt
 from fastapi import APIRouter, Depends, status, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from api.model.token_v1 import Token
-from .database import user_exists, get_user_by_username
+from .database import DatabaseRepository
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
@@ -21,14 +21,20 @@ router = APIRouter(
     responses={404: {"description": "Not found"}}
 )
 
+def get_database_repository() -> DatabaseRepository:
+    """
+    dependency to get the DatabaseRepository instance.
+    This allows for easy testing and mocking of the repository.
+    """
+    return DatabaseRepository()
 
-def authenticate_user(username: str, password: str):
+def authenticate_user(username: str, password: str, repository: DatabaseRepository = Depends(get_database_repository)):
     """
     verify if user exists in the database and check if password matches the hashed password
     """
     try:
         # get user from database
-        user = get_user_by_username(username=username)
+        user = repository.get_user_by_username(username=username)
         # check if user exists and password matches with hashed password
         if user and bcrypt.checkpw(password.encode(), user["password"].encode()):
             return True
@@ -58,12 +64,12 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 
 
 @router.post("/")
-async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> Token:
+async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], repository: DatabaseRepository = Depends(get_database_repository)) -> Token:
     """
     verify if user exists in the database, check if password matches the stored hashed password,
     authenticate user and return a token
     """
-    if not user_exists(value=form_data.username):
+    if not repository.user_exists(value=form_data.username):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password",
