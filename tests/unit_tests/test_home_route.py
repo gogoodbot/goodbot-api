@@ -1,4 +1,3 @@
-
 """
 home route unit tests
 """
@@ -6,7 +5,6 @@ home route unit tests
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from fastapi.testclient import TestClient
-from fastapi import HTTPException
 from api.main import app
 from api.routes.home_route_v1 import get_homepage_data
 from api.routes.database import DatabaseRepository
