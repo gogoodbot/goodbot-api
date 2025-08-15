@@ -7,7 +7,7 @@ import pytest
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from fastapi.responses import JSONResponse
-from api.routes.middleware import AuthMiddleware
+from routes.middleware import AuthMiddleware
 
 
 @pytest.fixture
@@ -17,7 +17,7 @@ def app(mocker):
     """
     # mock verify_access_token
     mocker.patch(
-        "api.routes.middleware.verify_access_token",
+        "routes.middleware.verify_access_token",
         new_callable=AsyncMock
     )
 
@@ -55,7 +55,7 @@ def test_request_with_valid_token(client, mocker):
     """
     # mock verify_access_token to return valid payload
     mock_verify = mocker.patch(
-        "api.routes.middleware.verify_access_token", new_callable=AsyncMock)
+        "routes.middleware.verify_access_token", new_callable=AsyncMock)
     mock_verify.return_value = {"sub": "testuser"}
 
     # perform request with a valid token
@@ -74,7 +74,7 @@ def test_request_with_invalid_token(client, mocker):
     """
     # mock verify_access_token to raise HTTPException
     mock_verify = mocker.patch(
-        "api.routes.middleware.verify_access_token", new_callable=AsyncMock)
+        "routes.middleware.verify_access_token", new_callable=AsyncMock)
     mock_verify.side_effect = HTTPException(
         status_code=401, detail="Invalid token")
 
@@ -94,7 +94,7 @@ def test_request_with_malformed_token(client, mocker):
     """
     # mock verify_access_token to ensure it's not called
     mock_verify = mocker.patch(
-        "api.routes.middleware.verify_access_token", new_callable=AsyncMock)
+        "routes.middleware.verify_access_token", new_callable=AsyncMock)
 
     # perform request with a malformed Authorization header
     response = client.get(
