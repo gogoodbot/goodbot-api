@@ -199,3 +199,48 @@ class DatabaseRepository:
         except Exception as e:  # pylint: disable=broad-except
             print(f"Error getting expert by id: {e}")
             return None
+
+    async def get_nonprofits(self, page_number: int = 1, page_size: int = 4):
+        """
+        get nonprofits from database. Handles pagination.
+        :param page_number: the page number to fetch
+        :param page_size: the number of items per page
+        :return: list of nonprofits
+        """
+        try:
+            response = self.client.table("nonprofits").select("*").range(
+                (page_number - 1) * page_size, page_number * page_size - 1
+            ).execute()
+            if not response.data:
+                print(f"Error getting all nonprofits: {response}")
+                return None
+            # Shuffle the nonprofits list to randomize the order
+            random.shuffle(response.data)
+            entities = []
+            for nonprofit in response.data:
+                entity = await self.get_entity_by_nonprofit_id(nonprofit["id"])
+                if entity:
+                    entities.append(entity[0])
+
+            return entities
+        except Exception as e:  # pylint: disable=broad-except
+            print(f"Error getting all nonprofits: {e}")
+            return None
+
+    async def get_entity_by_nonprofit_id(self, nonprofit_id: str):
+        """
+        get entity by given nonprofit id from database
+        :param nonprofit_id: the id of the nonprofit
+        :return: entity data or None if not found
+        """
+        try:
+            response = self.client.table("nonprofits").select("entity_id").eq("id", nonprofit_id).execute()
+            if not response.data:
+                print(f"Error getting entity by nonprofit id: {response}")
+                return None
+            entity_id = response.data[0]["entity_id"]
+            response = self.client.table("entities").select("*").eq("id", entity_id).execute()
+            return response.data
+        except Exception as e:  # pylint: disable=broad-except
+            print(f"Error getting entity by nonprofit id: {e}")
+            return None
