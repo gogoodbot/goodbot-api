@@ -5,7 +5,7 @@ middleware API interceptor
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
-from api.routes.auth_route_v1 import verify_access_token
+from routes.auth_route_v1 import verify_access_token
 
 
 class AuthMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-public-methods

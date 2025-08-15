@@ -29,13 +29,13 @@ def test_fetch_litigations_valid_token(mocker):
 
     # mock verify_access_token to simulate valid token
     mocker.patch(
-        "api.routes.litigations_route_v1.verify_access_token",
+        "routes.litigations_route_v1.verify_access_token",
         return_value=payload
     )
 
     # mock get_litigations to return dummy data
     mock_litigations = [{"id": 1, "case_name": "Test Case"}]
-    mocker.patch("api.routes.litigations_route_v1.DatabaseRepository.get_litigations",
+    mocker.patch("routes.litigations_route_v1.DatabaseRepository.get_litigations",
                  return_value=mock_litigations)
 
     # perform request
@@ -54,7 +54,7 @@ def test_fetch_litigations_invalid_token(mocker):
     """
     # patch verify_access_token in the middleware
     mocker.patch(
-        "api.routes.middleware.verify_access_token",
+        "routes.middleware.verify_access_token",
         side_effect=HTTPException(
             status_code=401,
             detail="Could not validate credentials"
@@ -89,13 +89,13 @@ def test_fetch_litigations_db_error(mocker):
 
     # mock verify_access_token to simulate valid token
     mocker.patch(
-        "api.routes.litigations_route_v1.verify_access_token",
+        "routes.litigations_route_v1.verify_access_token",
         return_value=valid_token
     )
 
     # mock get_litigations to raise an exception
     mocker.patch(
-        "api.routes.litigations_route_v1.DatabaseRepository.get_litigations",
+        "routes.litigations_route_v1.DatabaseRepository.get_litigations",
         side_effect=Exception("Database error")
     )
 
