@@ -5,10 +5,10 @@ user data operations module v1
 from typing import Annotated, Dict, Any
 import bcrypt
 from fastapi import APIRouter, Depends
-from api.model.create_user_request_v1 import CreateUserRequest
-from api.model.user_v1 import User
+from model.create_user_request_v1 import CreateUserRequest
+from model.user_v1 import User
 from .auth_route_v1 import verify_access_token
-from .database import DatabaseRepository
+from data.database_repository import DatabaseRepository
 
 router = APIRouter(
     prefix="/users",

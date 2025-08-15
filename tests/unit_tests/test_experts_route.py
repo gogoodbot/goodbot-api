@@ -5,8 +5,8 @@ unit test class for experts route
 from fastapi.testclient import TestClient
 import pytest
 from unittest.mock import MagicMock, AsyncMock
-from main import app
-from api.routes.database import DatabaseRepository
+from api.main import app
+from data.database_repository import DatabaseRepository
 
 client = TestClient(app)
 
@@ -29,7 +29,7 @@ def test_get_experts(mocker):
         {"id": "2", "name": "Expert Two"}
     ]
     mocker.patch(
-        "api.routes.experts_route_v1.DatabaseRepository.get_experts",
+        "routes.experts_route_v1.DatabaseRepository.get_experts",
         return_value=mock_experts
     )
 
@@ -43,7 +43,7 @@ def test_get_expert_by_id(mocker):
     """
     mock_expert = {"id": "1", "name": "Expert One"}
     mocker.patch(
-        "api.routes.experts_route_v1.DatabaseRepository.get_expert_by_id",
+        "routes.experts_route_v1.DatabaseRepository.get_expert_by_id",
         return_value=mock_expert
     )
 
@@ -57,7 +57,7 @@ def test_get_experts_error(mocker):
     """
     # Mock an exception in the repository method
     mocker.patch(
-        "api.routes.experts_route_v1.DatabaseRepository.get_experts",
+        "routes.experts_route_v1.DatabaseRepository.get_experts",
         side_effect=Exception("Database error")
     )
 
@@ -70,7 +70,7 @@ def test_get_expert_by_id_error(mocker):
     Test error handling in get_expert_by_id endpoint.
     """
     mocker.patch(
-        "api.routes.experts_route_v1.DatabaseRepository.get_expert_by_id",
+        "routes.experts_route_v1.DatabaseRepository.get_expert_by_id",
         side_effect=Exception("Error fetching expert by id")
     )
 

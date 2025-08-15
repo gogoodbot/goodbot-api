@@ -4,7 +4,7 @@ database operations unit tests
 
 from unittest.mock import MagicMock
 import pytest
-from api.routes.database import DatabaseRepository
+from data.database_repository import DatabaseRepository
 
 @pytest.fixture
 def mock_client(mocker):
@@ -13,7 +13,7 @@ def mock_client(mocker):
     """
     # mock the client.table().select().execute() chain
     mock_db_client = MagicMock()
-    mocker.patch("api.routes.database.get_database_client", return_value=mock_db_client)
+    mocker.patch("data.database_repository.get_database_client", return_value=mock_db_client)
     return mock_db_client
 
 @pytest.fixture

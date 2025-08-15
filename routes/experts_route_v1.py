@@ -4,7 +4,7 @@ experts data operations route v1
 """
 
 from fastapi import APIRouter, Depends
-from api.routes.database import DatabaseRepository
+from data.database_repository import DatabaseRepository
 
 router = APIRouter(
     prefix="/experts",

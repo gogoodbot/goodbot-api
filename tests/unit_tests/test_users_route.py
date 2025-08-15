@@ -8,7 +8,7 @@ import pytest
 import jwt
 from fastapi.testclient import TestClient
 from fastapi import HTTPException
-from main import app
+from api.main import app
 
 client = TestClient(app)
 
@@ -18,10 +18,10 @@ def mock_dependencies(mocker):
     """
     mocking the functions that interact with the database
     """
-    mocker.patch("api.routes.users_route_v1.DatabaseRepository.user_exists", return_value=False)
-    mocker.patch("api.routes.users_route_v1.DatabaseRepository.insert_user", return_value=True)
+    mocker.patch("routes.users_route_v1.DatabaseRepository.user_exists", return_value=False)
+    mocker.patch("routes.users_route_v1.DatabaseRepository.insert_user", return_value=True)
     mocker.patch(
-        "api.routes.users_route_v1.DatabaseRepository.get_user_by_username",
+        "routes.users_route_v1.DatabaseRepository.get_user_by_username",
         return_value={"username": "testuser",
                       "password": "hashed_pw",
                       "active": 1}
@@ -29,7 +29,7 @@ def mock_dependencies(mocker):
 
     # simulate a valid token
     mocker.patch(
-        "api.routes.auth_route_v1.verify_access_token",
+        "routes.auth_route_v1.verify_access_token",
         return_value={"sub": "testuser"}
     )
 
@@ -51,7 +51,7 @@ def test_create_user_already_exists(mock_dependencies, mocker):
     Test user creation when the user already exists.
     """
     # mock `user_exists` to simulate the user already exists
-    mocker.patch("api.routes.users_route_v1.DatabaseRepository.user_exists", return_value=True)
+    mocker.patch("routes.users_route_v1.DatabaseRepository.user_exists", return_value=True)
 
     user_data = {"username": "existinguser", "password": "password123"}
 
@@ -79,7 +79,7 @@ def test_get_user(mock_dependencies, mocker):
 
     # patch the verify_access_token function to return a valid payload
     mocker.patch(
-        "api.routes.users_route_v1.verify_access_token",
+        "routes.users_route_v1.verify_access_token",
         return_value=payload
     )
 
@@ -99,7 +99,7 @@ def test_get_user_invalid_token(mock_dependencies, mocker):
     """
     # patch verify_access_token in the middleware
     mocker.patch(
-        "api.routes.middleware.verify_access_token",
+        "routes.middleware.verify_access_token",
         side_effect=HTTPException(
             status_code=401,
             detail="Could not validate credentials"

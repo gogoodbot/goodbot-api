@@ -5,7 +5,7 @@ litigations data operations route v1
 from typing import Annotated, Dict, Any
 from fastapi import APIRouter, Depends
 from .auth_route_v1 import verify_access_token
-from .database import DatabaseRepository
+from data.database_repository import DatabaseRepository
 
 router = APIRouter(
     prefix="/litigations",
