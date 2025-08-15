@@ -2,7 +2,7 @@
 Use case for fetching homepage data including structural subfactors and their associated harms and risks.
 Each harm and risk holds a list of nonprofits, experts, litigations, policies and resources.
 """
-from api.model.home_v1 import HomePageData
+from model.home_v1 import HomePageData
 
 class GetHomePageData:
     """Use case for fetching homepage data including structural subfactors and their associated items."""

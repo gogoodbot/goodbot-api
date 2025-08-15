@@ -4,9 +4,9 @@ structural subfactors data operations route v1
 
 from fastapi import APIRouter, Depends
 
-from api.routes.database import DatabaseRepository
-from api.usecases.get_homepage_data import GetHomePageData
-from ..model.home_v1 import HomePageData
+from data.database_repository import DatabaseRepository
+from usecase.get_homepage_data import GetHomePageData
+from model.home_v1 import HomePageData
 
 router = APIRouter(
     prefix="/home",
