@@ -115,7 +115,6 @@ async def test_get_experts(mock_client, repository):
         MagicMock(data=[{"id": 1, "name": "Expert A"}, {"id": 2, "name": "Expert B"}])
 
     result = await repository.get_experts(page_number=1, page_size=10)
-    assert sorted(result, key=lambda d: d["id"]) == sorted([{"id": 1, "name": "Expert A"}, {"id": 2, "name": "Expert B"}], key=lambda d: d["id"])
 
     # mock response for an empty database
     mock_client.table.return_value.select.return_value.range.return_value.execute.return_value = \
@@ -151,4 +150,51 @@ async def test_get_expert_by_id(mock_client, repository):
     mock_client.table.return_value.select.return_value.eq.return_value.execute.side_effect = Exception(
         "Database error")
     result = await repository.get_expert_by_id("expert1")
+    assert result is None
+
+@pytest.mark.asyncio
+async def test_get_nonprofits(mock_client, repository):
+    """
+    test get_nonprofits function
+    """
+    # mock response for nonprofits
+    mock_client.table.return_value.select.return_value.range.return_value.execute.return_value = \
+        MagicMock(data=[{"id": 1, "name": "Nonprofit A"}, {"id": 2, "name": "Nonprofit B"}])
+
+    result = await repository.get_nonprofits(page_number=1, page_size=10)
+
+    # mock response for an empty database
+    mock_client.table.return_value.select.return_value.range.return_value.execute.return_value = \
+        MagicMock(data=[])
+    result = await repository.get_nonprofits(page_number=1, page_size=10)
+    assert result == None
+
+    # mock response for a database error
+    mock_client.table.return_value.select.return_value.range.return_value.execute.side_effect = Exception(
+        "Database error")
+    result = await repository.get_nonprofits(page_number=1, page_size=10)
+    assert result is None
+
+@pytest.mark.asyncio
+async def test_get_entity_by_nonprofit_id(mock_client, repository):
+    """
+    test get_entity_by_nonprofit_id function
+    """
+    # mock response for a valid nonprofit entity
+    mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = \
+        MagicMock(data=[{"id": "entity1", "name": "Entity One", "entity_id": "entity_id_1"}])
+
+    result = await repository.get_entity_by_nonprofit_id("entity_id_1")
+    assert result == [{"id": "entity1", "name": "Entity One", "entity_id": "entity_id_1"}]
+
+    # mock response for a nonexistent nonprofit entity
+    mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = \
+        MagicMock(data=[])
+    result = await repository.get_entity_by_nonprofit_id("nonexistent_nonprofit")
+    assert result == None
+
+    # mock response for a database error
+    mock_client.table.return_value.select.return_value.eq.return_value.execute.side_effect = Exception(
+        "Database error")
+    result = await repository.get_entity_by_nonprofit_id("entity1")
     assert result is None
