@@ -14,44 +14,12 @@ class GetHomePageData:
         Get composite homepage data which includes nonprofits, experts, litigations, policies and resources.
         """
         try:
-            subfactors = await self.repository.get_structural_subfactors()
-            # iterate through each subfactor, fetch harms and risks by id and add them as a list of objects
-            # to the subfactor object
-            if not subfactors:
-                return {"message": "No structural subfactors found"}
-            for subfactor in subfactors:
-                harms_and_risks = await self.repository.get_harm_and_risk_by_subfactor_id(subfactor["id"])
-                if harms_and_risks:
-                    subfactor["harms_and_risks"] = harms_and_risks
+            subfactors = await self.repository.get_homepage_data()
 
-                # iterate through each harm and risk, fetch nonprofits by id and add them as a list of objects
-                # to the harm and risk object
-                for harm_and_risk in harms_and_risks:
-                    nonprofits_and_harm_risks = await self.repository.get_nonprofits_by_harm_risk_id(harm_and_risk["id"])
-                    # add "nonprofits" key to the harm and risk object, then add a list of entities based on the nonprofit ids
-                    if nonprofits_and_harm_risks:
-                        entities = []
-                        for nonprofit_and_harm_risk in nonprofits_and_harm_risks:
-                            entity = await self.repository.get_entity_by_nonprofit_id(nonprofit_and_harm_risk["nonprofit_id"])
-                            if entity:
-                                entities += entity
-                        harm_and_risk["nonprofits"] = entities
-
-                    # fetch experts by harm and risk id and iterate through to get experts
-                    experts_and_harm_risks = await self.repository.get_experts_by_harm_risk_id(harm_and_risk["id"])
-                    if experts_and_harm_risks:
-                        experts = []
-                        for expert_and_harm_risk in experts_and_harm_risks:
-                            expert = await self.repository.get_expert_by_id(expert_and_harm_risk["expert_id"])
-                            if expert:
-                                experts.append(expert)
-                        harm_and_risk["experts"] = experts
-
-
-                    # TODO: fetch experts, litigations, policies and resources for each harm and risk and add each of them as objects/keys to harms and risks object
-                    # harm_and_risk["litigations"] = self.repository.get_litigations_by_harm_and_risk_id(harm_and_risk["id"])
-                    # harm_and_risk["policies"] = self.repository.get_policies_by_harm_and_risk_id(harm_and_risk["id"])
-                    # harm_and_risk["resources"] = self.repository.get_resources_by_harm_and_risk_id(harm_and_risk["id"])
+            # TODO: fetch experts, litigations, policies and resources for each harm and risk and add each of them as objects/keys to harms and risks object
+            # harm_and_risk["litigations"] = self.repository.get_litigations_by_harm_and_risk_id(harm_and_risk["id"])
+            # harm_and_risk["policies"] = self.repository.get_policies_by_harm_and_risk_id(harm_and_risk["id"])
+            # harm_and_risk["resources"] = self.repository.get_resources_by_harm_and_risk_id(harm_and_risk["id"])
 
             return HomePageData(subfactors=subfactors)
         except Exception as e:
