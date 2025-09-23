@@ -276,3 +276,65 @@ class DatabaseRepository:
         except Exception as e:  # pylint: disable=broad-except
             print(f"Error updating entity by id: {e}")
             return None
+
+    async def search_by_keywords(self, keywords: str):
+        """
+        search entities, nonprofits and experts by given keywords in database
+        :param keywords: the keywords to search
+        :return: list of entities, nonprofits and experts matching the keywords
+        """
+        try:
+            # turn string keywords into an array or keywords
+            keywords = keywords.replace(" ", ",")
+            keywords_array = keywords.split(",")
+            # add single quotes (') around each keyword
+            keywords_array = [f"'{keyword}'" for keyword in keywords_array]
+            # join the keywords with | operator for full text search
+            keywords = " | ".join(keywords_array)
+
+            result_entities = (
+                self.client.from_("entities")
+                .select("id")
+                .text_search("about", keywords)
+                .execute()
+            )
+
+            result_experts = self.client.rpc(
+                "search_experts_with_keyword", {"q": keywords}
+            ).execute()
+
+            # get nonprofits by entity ids
+            result_nonprofits = []
+            for entity in result_entities.data:
+                nonprofits = (
+                    self.client.table("nonprofits")
+                    .select("*")
+                    .eq("entity_id", entity["id"])
+                    .execute()
+                )
+                if nonprofits.data:
+                    result_nonprofits.extend(nonprofits.data)
+
+            # filter result_entities to only include those with matching nonprofits
+            result_entities.data = [
+                entity
+                for entity in result_entities.data
+                if any(
+                    nonprofit["entity_id"] == entity["id"]
+                    for nonprofit in result_nonprofits
+                )
+            ]
+
+            result_entities = self.client.rpc(
+                "search_entities_with_keyword", {"q": keywords}
+            ).execute()
+
+            # combine results into a json object
+            response = {
+                "nonprofits": result_entities,
+                "experts": result_experts,
+            }
+            return response
+        except Exception as e:  # pylint: disable=broad-except
+            print(f"Error searching by keywords: {e}")
+            return None
