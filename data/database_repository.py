@@ -331,8 +331,8 @@ class DatabaseRepository:
 
             # combine results into a json object
             response = {
-                "nonprofits": result_entities,
-                "experts": result_experts,
+                "nonprofits": result_entities.data,
+                "experts": result_experts.data,
             }
             return response
         except Exception as e:  # pylint: disable=broad-except

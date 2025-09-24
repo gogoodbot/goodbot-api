@@ -5,8 +5,6 @@ text search data operations route v1
 from fastapi import APIRouter, Depends
 
 from data.database_repository import DatabaseRepository
-from model.home_v1 import HomePageData
-from usecase.get_homepage_data import GetHomePageData
 
 router = APIRouter(
     prefix="/search", tags=["search"], responses={404: {"description": "Not found"}}

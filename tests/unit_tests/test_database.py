@@ -2,6 +2,7 @@
 database operations unit tests
 """
 
+from unittest import mock
 from unittest.mock import MagicMock
 
 import pytest
@@ -240,21 +241,33 @@ async def test_search_by_keywords(mock_client, repository):
     """
     test search_by_keywords function
     """
+    mock_result = {
+        "nonprofits": [
+            {"id": 1, "name": "Search A"},
+            {"id": 2, "name": "Search B"},
+        ],
+        "experts": [
+            {"id": 1, "name": "Search A"},
+            {"id": 2, "name": "Search B"},
+        ],
+    }
+
     # mock response for search results
-    mock_client.table.return_value.select.return_value.text_search.return_value.execute.return_value = MagicMock(
-        data=[{"id": 1, "name": "Result A"}, {"id": 2, "name": "Result B"}]
+    mock_client.rpc.return_value.execute.return_value = MagicMock(
+        data=[
+            {"id": 1, "name": "Search A"},
+            {"id": 2, "name": "Search B"},
+        ]
     )
     result = await repository.search_by_keywords("test query")
-    assert result == [{"id": 1, "name": "Result A"}, {"id": 2, "name": "Result B"}]
+    assert result == mock_result
+
     # mock response for no search results
-    mock_client.table.return_value.select.return_value.text_search.return_value.execute.return_value = MagicMock(
-        data=[]
-    )
+    mock_client.rpc.return_value.execute.return_value = MagicMock(data=[])
+
     result = await repository.search_by_keywords("no results query")
-    assert result == None
+    assert result == {"nonprofits": [], "experts": []}
     # mock response for a database error
-    mock_client.table.return_value.select.return_value.text_search.return_value.execute.side_effect = Exception(
-        "Database error"
-    )
+    mock_client.rpc.return_value.execute.return_value = Exception("Database error")
     result = await repository.search_by_keywords("error query")
     assert result is None
