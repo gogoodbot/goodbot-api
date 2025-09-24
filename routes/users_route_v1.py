@@ -2,19 +2,21 @@
 user data operations module v1
 """
 
-from typing import Annotated, Dict, Any
+from typing import Annotated, Any, Dict
+
 import bcrypt
 from fastapi import APIRouter, Depends
+
+from data.database_repository import DatabaseRepository
 from model.create_user_request_v1 import CreateUserRequest
 from model.user_v1 import User
+
 from .auth_route_v1 import verify_access_token
-from data.database_repository import DatabaseRepository
 
 router = APIRouter(
-    prefix="/users",
-    tags=["users"],
-    responses={404: {"description": "Not found"}}
+    prefix="/users", tags=["users"], responses={404: {"description": "Not found"}}
 )
+
 
 def get_database_repository() -> DatabaseRepository:
     """
@@ -25,7 +27,10 @@ def get_database_repository() -> DatabaseRepository:
 
 
 @router.post("/")
-async def create_user(user: CreateUserRequest, repository: DatabaseRepository = Depends(get_database_repository)):
+async def create_user(
+    user: CreateUserRequest,
+    repository: DatabaseRepository = Depends(get_database_repository),
+):
     """
     hash and salt password, check if user already exists, insert user into database
     """
@@ -35,7 +40,8 @@ async def create_user(user: CreateUserRequest, repository: DatabaseRepository = 
 
         # hash password
         hashed_password = bcrypt.hashpw(
-            user.password.encode(), bcrypt.gensalt()).decode()
+            user.password.encode(), bcrypt.gensalt()
+        ).decode()
 
         # check if user already exists
         if repository.user_exists(value=username):
@@ -55,7 +61,10 @@ async def create_user(user: CreateUserRequest, repository: DatabaseRepository = 
 
 
 @router.get("/me", response_model=User)
-async def get_user(access_token: Annotated[Dict[str, Any], Depends(verify_access_token)], repository: DatabaseRepository = Depends(get_database_repository)):
+async def get_user(
+    access_token: Annotated[Dict[str, Any], Depends(verify_access_token)],
+    repository: DatabaseRepository = Depends(get_database_repository),
+):
     """
     get user from database by username
     """
