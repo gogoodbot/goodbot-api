@@ -222,6 +222,40 @@ class AIService:
             print(f"Error generating summary with LLM: {e}")
             return None
 
+    async def generate_hashtags_with_llm(self, about_text: str) -> Optional[str]:
+        """
+        Use LangChain with Google Gemini 2.0 Flash to generate hashtags from the about text.
+        """
+        try:
+            messages = [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a helpful assistant that generates relevant hashtags based on the provided text. "
+                        "Extract key themes, topics, and concepts from the text and convert them into concise hashtags. "
+                        "Each hashtag should be a single word or a short phrase without spaces, prefixed with the '#' symbol, all lowercase."
+                        "Avoid using special characters or punctuation in the hashtags. "
+                        "Generate a random number of hashtags between 1 to 4 that best represent the content of the text."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Here is the about text:\n\n{about_text}\n\n"
+                        "Please generate a random number of relevant hashtags between 1 to 4 that capture the main themes and topics of this text."
+                    ),
+                },
+            ]
+            ai_response = self.llm_client.invoke(messages)
+            if ai_response and ai_response.content:
+                # Extract hashtags from response content
+                hashtags = re.findall(r"#\w+", ai_response.content)
+                return " ".join(hashtags) if hashtags else None
+            return None
+        except Exception as e:
+            print(f"Error generating hashtags with LLM: {e}")
+            return None
+
     def write_to_text_file(self, filename: str, content: str):
         """
         write content to text file
@@ -327,7 +361,7 @@ class AIService:
                                 f"No about page found for entity id: {entity['id']} - {entity['name']}"
                             )
                             continue
-                        await self.database_repository.update_entity(
+                        await self.database_repository.update_entity_by_id(
                             entity["id"], {"about_page": about_page_url}
                         )
                         print("Successfully scraped about page")
@@ -351,7 +385,7 @@ class AIService:
                             )
                             continue
                         # 4. save summary in entities "about" column
-                        await self.database_repository.update_entity(
+                        await self.database_repository.update_entity_by_id(
                             entity["id"], {"about": ai_about_summary}
                         )
                         print(
@@ -439,4 +473,81 @@ class AIService:
             self.llm_rate_limiter["last_call_time"] = 0
         except Exception as e:  # pylint: disable=broad-except:
             print(f"Error generating expert summaries: {e}")
+            return None
+
+    async def generate_entities_hashtag(self):
+        """
+        generate hashtags using llm for all entities in the database based on their about summary
+        """
+        try:
+            entities = await self.database_repository.get_entities(
+                page_number=1, page_size=-1
+            )
+            if not entities:
+                print(f"Error getting all entities: {entities}")
+                return None
+
+            for entity in entities:
+                if entity["tags"]:
+                    print(
+                        f"Entity id: {entity['id']} - {entity['name']} already has hashtags. Skipping."
+                    )
+                    continue
+                elif entity["about"]:
+                    if (
+                        self.llm_rate_limiter["calls"]
+                        >= self.llm_rate_limiter["max_calls"]
+                    ):
+                        print(
+                            "LLM rate limit reached. Please wait before making more requests."
+                        )
+                        sleep(60)
+                        self.llm_rate_limiter["calls"] = 0
+                        self.llm_rate_limiter["last_call_time"] = 0
+                    if not self.llm_rate_limiter["last_call_time"]:
+                        self.llm_rate_limiter["last_call_time"] = (
+                            datetime.datetime.now().timestamp()
+                        )
+                    if (
+                        datetime.datetime.now().timestamp()
+                        - self.llm_rate_limiter["last_call_time"]
+                    ) * 1000 > self.llm_rate_limiter["reset_time"]:
+                        self.llm_rate_limiter["calls"] = 0
+                        self.llm_rate_limiter["last_call_time"] = (
+                            datetime.datetime.now().timestamp()
+                        )
+
+                    # call llm to generate hashtags based on about summary
+                    ai_hashtags = await self.generate_hashtags_with_llm(entity["about"])
+                    self.llm_rate_limiter["calls"] += 1
+                    if not ai_hashtags:
+                        print(
+                            f"Failed to generate hashtags for entity id: {entity['id']}"
+                        )
+                        continue
+                    # convert llm string response to an array of hashtags
+                    ai_hashtags = ai_hashtags.split()
+
+                    if not ai_hashtags:
+                        print(
+                            f"No valid hashtags generated for entity id: {entity['id']}"
+                        )
+                        continue
+                    # save hashtags in entities "hashtags" column
+                    await self.database_repository.update_entity_by_id(
+                        entity["id"], {"tags": ai_hashtags}
+                    )
+                    print(
+                        f"Successfully generated hashtags using llm for entity id: {entity['id']} | Hashtags: {ai_hashtags} | type: {type(ai_hashtags)}"
+                    )
+                else:
+                    print(
+                        f"No about summary found for entity id: {entity['id']} - {entity['name']}. Skipping."
+                    )
+
+            # reset llm rate limiter
+            self.llm_rate_limiter["calls"] = 0
+            self.llm_rate_limiter["last_call_time"] = 0
+        except Exception as e:  # pylint: disable=broad-except:
+            print(f"Error generating entity hashtags: {e}")
             return None
