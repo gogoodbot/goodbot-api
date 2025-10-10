@@ -58,8 +58,8 @@ async def generate_entity_summary(service: AIService = Depends(get_ai_service)):
     """
     try:
         # token_username: str = access_token.get("sub")
-        ai_summary = await service.generate_experts_summary()
-        return {"success": "public nonprofits api"}
+        # ai_summary = await service.generate_entities_hashtag()
+        return {"success": "public nonprofits summary api"}
     except Exception as e:  # pylint: disable=broad-except
         print(f"Error generating summary: {e}")
         return {"message": "Error generating summary"}
