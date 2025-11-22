@@ -1,14 +1,17 @@
 """
 auth route unit tests
 """
+
 import os
-from dotenv import load_dotenv
+
 import bcrypt
 import jwt
-from jwt.exceptions import InvalidTokenError
 import pytest
+from dotenv import load_dotenv
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
+from jwt.exceptions import InvalidTokenError
+
 from api.main import app  # Replace with your FastAPI app import
 from routes.auth_route_v1 import create_access_token, verify_access_token
 
@@ -22,13 +25,16 @@ def test_login_success(mocker):
     """
     Mock database responses
     """
-    mocker.patch("routes.auth_route_v1.DatabaseRepository.user_exists", return_value=True)
-    mocker.patch("routes.auth_route_v1.DatabaseRepository.get_user_by_username", return_value={
-                 "password": bcrypt.hashpw(b"test", bcrypt.gensalt()).decode()})
+    mocker.patch(
+        "routes.auth_route_v1.DatabaseRepository.user_exists", return_value=True
+    )
+    mocker.patch(
+        "routes.auth_route_v1.DatabaseRepository.get_user_by_username",
+        return_value={"password": bcrypt.hashpw(b"test", bcrypt.gensalt()).decode()},
+    )
 
     response = client.post(
-        "/v1/login/",
-        data={"username": "testuser", "password": "test"}
+        "/v1/login/", data={"username": "testuser", "password": "test"}
     )
     assert response.status_code == 200
     assert "access_token" in response.json()
@@ -38,11 +44,12 @@ def test_login_failure_invalid_credentials(mocker):
     """
     test login failure with invalid credentials
     """
-    mocker.patch("routes.auth_route_v1.DatabaseRepository.user_exists", return_value=False)
+    mocker.patch(
+        "routes.auth_route_v1.DatabaseRepository.user_exists", return_value=False
+    )
 
     response = client.post(
-        "/v1/login",
-        data={"username": "invaliduser", "password": "invalid"}
+        "/v1/login", data={"username": "invaliduser", "password": "invalid"}
     )
     assert response.status_code == 401
     assert response.json() == {"detail": "Invalid username or password"}
@@ -54,8 +61,9 @@ async def test_create_access_token():
     """
     data = {"sub": "testuser"}
     token = create_access_token(data)
-    decoded_token = jwt.decode(token, os.environ.get("SECRET_KEY"), algorithms=[
-                               os.environ.get("ALGORITHM")])
+    decoded_token = jwt.decode(
+        token, os.environ.get("SECRET_KEY"), algorithms=[os.environ.get("ALGORITHM")]
+    )
     assert decoded_token["sub"] == "testuser"
 
 
@@ -64,8 +72,7 @@ async def test_verify_access_token_valid(mocker):
     """
     test verify access token
     """
-    mocker.patch("routes.auth_route_v1.jwt.decode",
-                 return_value={"sub": "testuser"})
+    mocker.patch("routes.auth_route_v1.jwt.decode", return_value={"sub": "testuser"})
     payload = await verify_access_token("testtoken")
     assert payload["sub"] == "testuser"
 
@@ -75,8 +82,7 @@ async def test_verify_access_token_invalid(mocker):
     """
     test verify access token with invalid token
     """
-    mocker.patch("routes.auth_route_v1.jwt.decode",
-                 side_effect=InvalidTokenError)
+    mocker.patch("routes.auth_route_v1.jwt.decode", side_effect=InvalidTokenError)
     with pytest.raises(HTTPException) as excinfo:
         await verify_access_token("invalid.token")
     assert excinfo.value.status_code == 401

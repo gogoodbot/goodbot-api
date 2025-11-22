@@ -3,16 +3,17 @@ user auth operations module v1
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import Annotated, Dict, Any
-import jwt
-from jwt.exceptions import InvalidTokenError, ExpiredSignatureError
+from typing import Annotated, Any, Dict
+
 import bcrypt
-from fastapi import APIRouter, Depends, status, HTTPException
-from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+import jwt
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 
 from config import get_settings
-from model.token_v1 import Token
 from data.database_repository import DatabaseRepository
+from model.token_v1 import Token
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -21,10 +22,9 @@ settings = get_settings()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 router = APIRouter(
-    prefix="/login",
-    tags=["login"],
-    responses={404: {"description": "Not found"}}
+    prefix="/login", tags=["login"], responses={404: {"description": "Not found"}}
 )
+
 
 def get_database_repository() -> DatabaseRepository:
     """
@@ -33,7 +33,12 @@ def get_database_repository() -> DatabaseRepository:
     """
     return DatabaseRepository()
 
-def authenticate_user(username: str, password: str, repository: DatabaseRepository = Depends(get_database_repository)):
+
+def authenticate_user(
+    username: str,
+    password: str,
+    repository: DatabaseRepository = Depends(get_database_repository),
+):
     """
     verify if user exists in the database and check if password matches the hashed password
     """
@@ -61,15 +66,16 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
         expire = datetime.now(timezone.utc) + timedelta(minutes=30)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(
-        to_encode,
-        settings.secret_key,
-        algorithm=settings.algorithm
+        to_encode, settings.secret_key, algorithm=settings.algorithm
     )
     return encoded_jwt
 
 
 @router.post("/", status_code=status.HTTP_200_OK)
-async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], repository: DatabaseRepository = Depends(get_database_repository)) -> Token:
+async def login(
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    repository: DatabaseRepository = Depends(get_database_repository),
+) -> Token:
     """
     verify if user exists in the database, check if password matches the stored hashed password,
     authenticate user and return a token
@@ -86,7 +92,9 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], repo
 
     user_authenticated = authenticate_user(form_data.username, form_data.password)
     if not user_authenticated:
-        logger.warning(f"Login failed - invalid password for user: {form_data.username}")
+        logger.warning(
+            f"Login failed - invalid password for user: {form_data.username}"
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -110,7 +118,9 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], repo
         ) from e
 
 
-async def verify_access_token(token: Annotated[str, Depends(oauth2_scheme)]) -> Dict[str, Any]:
+async def verify_access_token(
+    token: Annotated[str, Depends(oauth2_scheme)],
+) -> Dict[str, Any]:
     """
     get current user from database using bearer token
     """
@@ -127,9 +137,7 @@ async def verify_access_token(token: Annotated[str, Depends(oauth2_scheme)]) -> 
 
     try:
         payload = jwt.decode(
-            token,
-            settings.secret_key,
-            algorithms=[settings.algorithm]
+            token, settings.secret_key, algorithms=[settings.algorithm]
         )
         token_username: str = payload.get("sub")
         if token_username is None:

@@ -35,8 +35,12 @@ def get_ai_service() -> AIService:
 
 @router.get("/")
 async def get_nonprofits(
-    page_number: int = Query(default=1, ge=1, le=1000, description="Page number to fetch"),
-    page_size: int = Query(default=10, ge=1, le=100, description="Number of items per page"),
+    page_number: int = Query(
+        default=1, ge=1, le=1000, description="Page number to fetch"
+    ),
+    page_size: int = Query(
+        default=10, ge=1, le=100, description="Number of items per page"
+    ),
     repository: DatabaseRepository = Depends(get_database_repository),
 ):
     """
@@ -53,8 +57,7 @@ async def get_nonprofits(
         if nonprofits is None:
             logger.warning("No nonprofits found or database error")
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="No nonprofits found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="No nonprofits found"
             )
         logger.info(f"Successfully fetched {len(nonprofits)} nonprofits")
         return {"data": nonprofits, "page": page_number, "page_size": page_size}
@@ -64,7 +67,7 @@ async def get_nonprofits(
         logger.error(f"Error fetching nonprofits: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error fetching nonprofits"
+            detail="Error fetching nonprofits",
         ) from e
 
 
@@ -95,7 +98,7 @@ async def get_nonprofit_by_id(
             logger.warning(f"Nonprofit not found: {nonprofit_id}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Nonprofit not found with id: {nonprofit_id}"
+                detail=f"Nonprofit not found with id: {nonprofit_id}",
             )
         logger.info(f"Successfully fetched nonprofit: {nonprofit_id}")
         return {"data": nonprofit}
@@ -105,5 +108,5 @@ async def get_nonprofit_by_id(
         logger.error(f"Error fetching nonprofit {nonprofit_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error fetching nonprofit"
+            detail="Error fetching nonprofit",
         ) from e

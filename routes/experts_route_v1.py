@@ -12,8 +12,9 @@ logger = get_logger(__name__)
 router = APIRouter(
     prefix="/experts",
     tags=["experts"],  # Fixed typo: was "excepts"
-    responses={404: {"description": "Not found"}}
+    responses={404: {"description": "Not found"}},
 )
+
 
 def get_database_repository() -> DatabaseRepository:
     """
@@ -22,11 +23,16 @@ def get_database_repository() -> DatabaseRepository:
     """
     return DatabaseRepository()
 
+
 @router.get("/")
 async def get_experts(
-    page_number: int = Query(default=1, ge=1, le=1000, description="Page number to fetch"),
-    page_size: int = Query(default=10, ge=-1, le=100, description="Number of items per page, -1 for all"),
-    repository: DatabaseRepository = Depends(get_database_repository)
+    page_number: int = Query(
+        default=1, ge=1, le=1000, description="Page number to fetch"
+    ),
+    page_size: int = Query(
+        default=10, ge=-1, le=100, description="Number of items per page, -1 for all"
+    ),
+    repository: DatabaseRepository = Depends(get_database_repository),
 ):
     """
     retrieve all experts with pagination
@@ -36,12 +42,13 @@ async def get_experts(
     logger.info(f"Fetching experts - page: {page_number}, size: {page_size}")
 
     try:
-        experts = await repository.get_experts(page_number=page_number, page_size=page_size)
+        experts = await repository.get_experts(
+            page_number=page_number, page_size=page_size
+        )
         if experts is None:
             logger.warning("No experts found or database error")
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="No experts found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="No experts found"
             )
         logger.info(f"Successfully fetched {len(experts)} experts")
         return {"data": experts, "page": page_number, "page_size": page_size}
@@ -51,12 +58,14 @@ async def get_experts(
         logger.error(f"Error fetching experts: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error fetching experts"
+            detail="Error fetching experts",
         ) from e
 
 
 @router.get("/{expert_id}")
-async def get_expert_by_id(expert_id: str, repository: DatabaseRepository = Depends(get_database_repository)):
+async def get_expert_by_id(
+    expert_id: str, repository: DatabaseRepository = Depends(get_database_repository)
+):
     """
     retrieve expert by id
     """
@@ -68,7 +77,7 @@ async def get_expert_by_id(expert_id: str, repository: DatabaseRepository = Depe
             logger.warning(f"Expert not found: {expert_id}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Expert not found with id: {expert_id}"
+                detail=f"Expert not found with id: {expert_id}",
             )
         logger.info(f"Successfully fetched expert: {expert_id}")
         return {"data": expert}
@@ -78,5 +87,5 @@ async def get_expert_by_id(expert_id: str, repository: DatabaseRepository = Depe
         logger.error(f"Error fetching expert {expert_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error fetching expert"
+            detail="Error fetching expert",
         ) from e

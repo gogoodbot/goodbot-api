@@ -47,8 +47,7 @@ async def get_home_page(usecase: GetHomePageData = Depends(get_homepage_data)):
         if data is None:
             logger.warning("No homepage data found")
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="No homepage data found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="No homepage data found"
             )
 
         # Validate data type
@@ -56,7 +55,7 @@ async def get_home_page(usecase: GetHomePageData = Depends(get_homepage_data)):
             logger.error(f"Invalid data type returned: {type(data)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Invalid data format from database"
+                detail="Invalid data format from database",
             )
 
         logger.info("Successfully fetched homepage data")
@@ -67,5 +66,5 @@ async def get_home_page(usecase: GetHomePageData = Depends(get_homepage_data)):
         logger.error(f"Error fetching homepage data: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error fetching homepage data"
+            detail="Error fetching homepage data",
         ) from e

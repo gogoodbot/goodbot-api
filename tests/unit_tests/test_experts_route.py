@@ -2,13 +2,16 @@
 unit test class for experts route
 """
 
-from fastapi.testclient import TestClient
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock
+from fastapi.testclient import TestClient
+
 from api.main import app
 from data.database_repository import DatabaseRepository
 
 client = TestClient(app)
+
 
 @pytest.fixture
 def mock_database_repository():
@@ -20,22 +23,24 @@ def mock_database_repository():
     mock_repo.get_expert_by_id = AsyncMock()
     return mock_repo
 
+
 def test_get_experts(mocker):
     """
     Test the get_experts endpoint.
     """
     mock_experts = [
-        {"id": "1", "name": "Expert One"}, 
-        {"id": "2", "name": "Expert Two"}
+        {"id": "1", "name": "Expert One"},
+        {"id": "2", "name": "Expert Two"},
     ]
     mocker.patch(
         "routes.experts_route_v1.DatabaseRepository.get_experts",
-        return_value=mock_experts
+        return_value=mock_experts,
     )
 
     response = client.get("/v1/experts/")
     assert response.status_code == 200
     assert response.json() == {"data": mock_experts}
+
 
 def test_get_expert_by_id(mocker):
     """
@@ -44,12 +49,13 @@ def test_get_expert_by_id(mocker):
     mock_expert = {"id": "1", "name": "Expert One"}
     mocker.patch(
         "routes.experts_route_v1.DatabaseRepository.get_expert_by_id",
-        return_value=mock_expert
+        return_value=mock_expert,
     )
 
     response = client.get("/v1/experts/1")
     assert response.status_code == 200
     assert response.json() == {"data": {"id": "1", "name": "Expert One"}}
+
 
 def test_get_experts_error(mocker):
     """
@@ -58,12 +64,13 @@ def test_get_experts_error(mocker):
     # Mock an exception in the repository method
     mocker.patch(
         "routes.experts_route_v1.DatabaseRepository.get_experts",
-        side_effect=Exception("Database error")
+        side_effect=Exception("Database error"),
     )
 
     response = client.get("/v1/experts/?page_number=1&page_size=10")
     assert response.status_code == 200
     assert response.json() == {"message": "Error fetching paged experts"}
+
 
 def test_get_expert_by_id_error(mocker):
     """
@@ -71,7 +78,7 @@ def test_get_expert_by_id_error(mocker):
     """
     mocker.patch(
         "routes.experts_route_v1.DatabaseRepository.get_expert_by_id",
-        side_effect=Exception("Error fetching expert by id")
+        side_effect=Exception("Error fetching expert by id"),
     )
 
     response = client.get("/v1/experts/1")

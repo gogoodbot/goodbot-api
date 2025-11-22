@@ -36,14 +36,14 @@ async def search(
         logger.warning(f"Search query too long: {len(query)} characters")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Search query too long (max 500 characters)"
+            detail="Search query too long (max 500 characters)",
         )
 
     if len(query.strip()) < 2:
         logger.warning("Search query too short")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Search query must be at least 2 characters"
+            detail="Search query must be at least 2 characters",
         )
 
     try:
@@ -63,5 +63,5 @@ async def search(
         logger.error(f'Error while searching for "{query}": {e}')
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error while searching for query"
+            detail=f"Error while searching for query",
         ) from e

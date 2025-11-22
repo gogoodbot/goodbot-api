@@ -4,6 +4,7 @@ database operations module
 
 import re
 from functools import lru_cache
+
 from supabase import Client, create_client
 
 from config import get_settings
@@ -20,9 +21,7 @@ def get_database_client() -> Client:
     Uses lru_cache to ensure we only create one client instance
     """
     logger.info("Creating Supabase client")
-    client: Client = create_client(
-        settings.database_url, settings.database_api_key
-    )
+    client: Client = create_client(settings.database_url, settings.database_api_key)
     return client
 
 
@@ -291,7 +290,7 @@ class DatabaseRepository:
         """
         try:
             # Sanitize input - remove special characters except alphanumeric, spaces, and hyphens
-            keywords = re.sub(r'[^a-zA-Z0-9\s\-]', '', keywords)
+            keywords = re.sub(r"[^a-zA-Z0-9\s\-]", "", keywords)
 
             # Limit length to prevent DoS
             keywords = keywords[:500]

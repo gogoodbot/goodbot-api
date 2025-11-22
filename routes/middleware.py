@@ -2,7 +2,7 @@
 middleware API interceptor
 """
 
-from fastapi import Request, HTTPException
+from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -38,4 +38,6 @@ class AuthMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-public-meth
         except Exception as e:  # pylint: disable=broad-except
             logger.error(f"AuthMiddleware - Unexpected error: {e}")
             # If token validation fails due to other exceptions, return a generic error response
-            return JSONResponse(content={"detail": "Authentication failed"}, status_code=500)
+            return JSONResponse(
+                content={"detail": "Authentication failed"}, status_code=500
+            )

@@ -2,12 +2,14 @@
 home route unit tests
 """
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock
 from fastapi.testclient import TestClient
+
 from api.main import app
-from routes.home_route_v1 import get_homepage_data
 from data.database_repository import DatabaseRepository
+from routes.home_route_v1 import get_homepage_data
 from usecase.get_homepage_data import GetHomePageData
 
 client = TestClient(app)
@@ -25,6 +27,7 @@ def mock_database_repository():
     mock_repo.get_entity_by_nonprofit_id = AsyncMock()
     return mock_repo
 
+
 @pytest.fixture
 def mock_usecase():
     """
@@ -34,21 +37,20 @@ def mock_usecase():
     mock_usecase.execute = AsyncMock()
     return mock_usecase
 
+
 def test_get_home_page_data(mocker, mock_database_repository, mock_usecase):
     """
     Test get_homepage_data dependency function
     """
     mocker.patch(
         "routes.home_route_v1.get_database_repository",
-        return_value=mock_database_repository
+        return_value=mock_database_repository,
     )
-    mocker.patch(
-        "routes.home_route_v1.GetHomePageData",
-        return_value=mock_usecase
-    )
+    mocker.patch("routes.home_route_v1.GetHomePageData", return_value=mock_usecase)
 
     result = get_homepage_data()
     assert result == mock_usecase
+
 
 def test_home_page_data_error(mocker, mock_database_repository, mock_usecase):
     """
@@ -57,7 +59,10 @@ def test_home_page_data_error(mocker, mock_database_repository, mock_usecase):
 
     mock_usecase.execute = AsyncMock(side_effect=Exception("Database error"))
 
-    mocker.patch("routes.home_route_v1.get_database_repository", return_value=mock_database_repository)
+    mocker.patch(
+        "routes.home_route_v1.get_database_repository",
+        return_value=mock_database_repository,
+    )
     mocker.patch("routes.home_route_v1.GetHomePageData", return_value=mock_usecase)
 
     response = client.get("/v1/home")

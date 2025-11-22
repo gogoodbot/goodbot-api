@@ -46,8 +46,7 @@ async def create_user(
     if repository.user_exists(value=username):
         logger.warning(f"User creation failed - user already exists: {username}")
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="User already exists"
+            status_code=status.HTTP_409_CONFLICT, detail="User already exists"
         )
 
     try:
@@ -64,7 +63,7 @@ async def create_user(
             logger.error(f"Failed to insert user into database: {username}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="User creation failed"
+                detail="User creation failed",
             )
 
         logger.info(f"User created successfully: {username}")
@@ -75,7 +74,7 @@ async def create_user(
         logger.error(f"Error creating user {username}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="User creation failed"
+            detail="User creation failed",
         ) from e
 
 
@@ -95,8 +94,7 @@ async def get_user(
         if not user:
             logger.error(f"User not found in database: {token_username}")
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
         return UserResponse(username=user["username"], active=user["active"])
     except HTTPException:
@@ -105,7 +103,5 @@ async def get_user(
         logger.error(f"Error fetching user {token_username}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error fetching user"
+            detail="Error fetching user",
         ) from e
-
-

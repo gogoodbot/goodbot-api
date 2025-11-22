@@ -6,17 +6,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import get_settings
-from routes import (
-    auth_route_v1,
-    experts_route_v1,
-    home_route_v1,
-    litigations_route_v1,
-    nonprofits_route_v1,
-    search_route_v1,
-    users_route_v1,
-)
+from routes import (auth_route_v1, experts_route_v1, home_route_v1,
+                    litigations_route_v1, nonprofits_route_v1, search_route_v1,
+                    users_route_v1)
 from routes.middleware import AuthMiddleware
-from utils.logger import setup_logging, get_logger
+from utils.logger import get_logger, setup_logging
 
 # Setup logging on application startup
 setup_logging()
@@ -33,7 +27,7 @@ def create_app():
     fastapi = FastAPI(
         title="GoodBot API",
         description="Backend API for the GoodBot Project",
-        version="1.0.0"
+        version="1.0.0",
     )
     fastapi.include_router(auth_route_v1.router, prefix="/v1")
     fastapi.include_router(users_route_v1.router, prefix="/v1")

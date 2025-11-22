@@ -2,7 +2,8 @@
 litigations data operations route v1
 """
 
-from typing import Annotated, Dict, Any
+from typing import Annotated, Any, Dict
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from data.database_repository import DatabaseRepository
@@ -15,8 +16,9 @@ logger = get_logger(__name__)
 router = APIRouter(
     prefix="/litigations",
     tags=["litigations"],
-    responses={404: {"description": "Not found"}}
+    responses={404: {"description": "Not found"}},
 )
+
 
 def get_database_repository() -> DatabaseRepository:
     """
@@ -29,7 +31,7 @@ def get_database_repository() -> DatabaseRepository:
 @router.get("/")
 async def fetch_litigations(
     _: Annotated[Dict[str, Any], Depends(verify_access_token)],
-    repository: DatabaseRepository = Depends(get_database_repository)
+    repository: DatabaseRepository = Depends(get_database_repository),
 ):
     """
     retrieve all litigations from database (requires authentication)
@@ -41,8 +43,7 @@ async def fetch_litigations(
         if litigations is None:
             logger.warning("No litigations found or database error")
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="No litigations found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="No litigations found"
             )
         logger.info(f"Successfully fetched {len(litigations)} litigations")
         return {"data": litigations}
@@ -52,5 +53,5 @@ async def fetch_litigations(
         logger.error(f"Error fetching litigations: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error fetching litigations"
+            detail="Error fetching litigations",
         ) from e
