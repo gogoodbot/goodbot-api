@@ -5,7 +5,11 @@ middleware API interceptor
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
+
 from routes.auth_route_v1 import verify_access_token
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class AuthMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-public-methods
@@ -28,10 +32,10 @@ class AuthMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-public-meth
             if token:
                 return await call_next(request)
         except HTTPException as e:
-            print(f"AuthMiddleware HTTPException: {e}")
+            logger.warning(f"AuthMiddleware - HTTPException: {e.detail}")
             # If token validation fails due to HTTPException, return the error response
             return JSONResponse(content={"detail": e.detail}, status_code=e.status_code)
         except Exception as e:  # pylint: disable=broad-except
-            print(f"AuthMiddleware Exception: {e}")
+            logger.error(f"AuthMiddleware - Unexpected error: {e}")
             # If token validation fails due to other exceptions, return a generic error response
-            return JSONResponse(content={"detail": f"Error: {str(e)}"}, status_code=500)
+            return JSONResponse(content={"detail": "Authentication failed"}, status_code=500)
