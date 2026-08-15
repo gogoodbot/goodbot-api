@@ -2,21 +2,26 @@
 database operations module
 """
 
-import os
+import re
+from functools import lru_cache
 
-from dotenv import load_dotenv
 from supabase import Client, create_client
 
+from config import get_settings
+from utils.logger import get_logger
 
+logger = get_logger(__name__)
+settings = get_settings()
+
+
+@lru_cache(maxsize=1)
 def get_database_client() -> Client:
     """
     create supabase client using environment variables
+    Uses lru_cache to ensure we only create one client instance
     """
-    load_dotenv()
-
-    client: Client = create_client(
-        os.environ.get("DATABASE_URL"), os.environ.get("DATABASE_API_KEY")
-    )
+    logger.info("Creating Supabase client")
+    client: Client = create_client(settings.database_url, settings.database_api_key)
     return client
 
 
@@ -42,7 +47,7 @@ class DatabaseRepository:
             )
             return len(response.data) > 0 and response.data[0]["active"] == 1
         except Exception as e:  # pylint: disable=broad-except
-            print(f"Error checking if user exists: {e}")
+            logger.error(f"Error checking if user exists: {e}")
             return False
 
     def get_user_by_username(self, username: str):
@@ -58,7 +63,7 @@ class DatabaseRepository:
             )
             return response.data[0]
         except Exception as e:  # pylint: disable=broad-except
-            print(f"Error getting user by username: {e}")
+            logger.error(f"Error getting user by username: {e}")
             return None
 
     def insert_user(self, username: str, hashed_password: str):
@@ -73,7 +78,7 @@ class DatabaseRepository:
             )
             return response.data
         except Exception as e:  # pylint: disable=broad-except
-            print(f"Error inserting user into database: {e}")
+            logger.error(f"Error inserting user into database: {e}")
             return None
 
     def get_litigations(self):
@@ -84,7 +89,7 @@ class DatabaseRepository:
             response = self.client.table("Litigation").select("*").execute()
             return response.data
         except Exception as e:  # pylint: disable=broad-except
-            print(f"Error getting all litigations: {e}")
+            logger.error(f"Error getting all litigations: {e}")
             return None
 
     async def get_homepage_data(self):
@@ -92,7 +97,7 @@ class DatabaseRepository:
         get homepage data through join queries from database
         """
         try:
-            response = self.client.rpc("get_homepage_data").execute()
+            response = self.client.rpc("get_homepage_data2").execute()
             return response.data
         except Exception as e:  # pylint: disable=broad-except
             print(f"Error getting homepage data: {e}")
@@ -284,9 +289,22 @@ class DatabaseRepository:
         :return: list of entities, nonprofits and experts matching the keywords
         """
         try:
+            # Sanitize input - remove special characters except alphanumeric, spaces, and hyphens
+            keywords = re.sub(r"[^a-zA-Z0-9\s\-]", "", keywords)
+
+            # Limit length to prevent DoS
+            keywords = keywords[:500]
+
             # turn string keywords into an array or keywords
             keywords = keywords.replace(" ", ",")
             keywords_array = keywords.split(",")
+            # Filter out empty strings
+            keywords_array = [k.strip() for k in keywords_array if k.strip()]
+
+            if not keywords_array:
+                logger.warning("No valid keywords after sanitization")
+                return {"nonprofits": [], "experts": []}
+
             # add single quotes (') around each keyword
             keywords_array = [f"'{keyword}'" for keyword in keywords_array]
             # join the keywords with | operator for full text search
@@ -336,5 +354,5 @@ class DatabaseRepository:
             }
             return response
         except Exception as e:  # pylint: disable=broad-except
-            print(f"Error searching by keywords: {e}")
+            logger.error(f"Error searching by keywords: {e}")
             return None
