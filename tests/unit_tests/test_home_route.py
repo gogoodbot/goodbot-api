@@ -1,70 +1,40 @@
-"""
-home route unit tests
-"""
-
-from unittest.mock import AsyncMock, MagicMock
-
 import pytest
+from unittest.mock import MagicMock, AsyncMock
 from fastapi.testclient import TestClient
-
 from api.main import app
-from data.database_repository import DatabaseRepository
-from routes.home_route_v1 import get_homepage_data
-from usecase.get_homepage_data import GetHomePageData
-
-client = TestClient(app)
-
+from routes.home_route_v1 import get_database_repository
 
 @pytest.fixture
-def mock_database_repository():
-    """
-    Mock DatabaseRepository for testing
-    """
-    mock_repo = MagicMock(spec=DatabaseRepository)
-    mock_repo.get_structural_subfactors = AsyncMock()
-    mock_repo.get_harm_and_risk_by_subfactor_id = AsyncMock()
-    mock_repo.get_nonprofits_by_harm_risk_id = AsyncMock()
-    mock_repo.get_entity_by_nonprofit_id = AsyncMock()
-    return mock_repo
-
+def mock_repo():
+    mock = MagicMock()
+     # Mock the async method for get_page_data in usecase
+    mock.get_homepage_data = AsyncMock(return_value=[])
+    return mock
 
 @pytest.fixture
-def mock_usecase():
-    """
-    Mock GetHomePageData use case for testing
-    """
-    mock_usecase = MagicMock(spec=GetHomePageData)
-    mock_usecase.execute = AsyncMock()
-    return mock_usecase
+def client(mock_repo):
+     # Override the database repository dependency
+    app.dependency_overrides[get_database_repository] = lambda: mock_repo
+    
+    client = TestClient(app)
+    yield client
+    
+     # Clean up overrides after test
+    app.dependency_overrides = {}
 
-
-def test_get_home_page_data(mocker, mock_database_repository, mock_usecase):
-    """
-    Test get_homepage_data dependency function
-    """
-    mocker.patch(
-        "routes.home_route_v1.get_database_repository",
-        return_value=mock_database_repository,
-    )
-    mocker.patch("routes.home_route_v1.GetHomePageData", return_value=mock_usecase)
-
-    result = get_homepage_data()
-    assert result == mock_usecase
-
-
-def test_home_page_data_error(mocker, mock_database_repository, mock_usecase):
-    """
-    Test error handling in get_homepage_data
-    """
-
-    mock_usecase.execute = AsyncMock(side_effect=Exception("Database error"))
-
-    mocker.patch(
-        "routes.home_route_v1.get_database_repository",
-        return_value=mock_database_repository,
-    )
-    mocker.patch("routes.home_route_v1.GetHomePageData", return_value=mock_usecase)
-
+def test_get_home_page_data(client, mock_repo):
+     # Setup mock
+    pass  # Already set up in the fixture above
+    
     response = client.get("/v1/home")
+    
     assert response.status_code == 200
-    assert response.json()["message"] == "Error fetching homepage data"
+    assert response.json()["subfactors"] == []
+
+def test_get_home_page_data_error(client, mock_repo):
+     # Setup mock to raise an exception on get_homepage_data
+    mock_repo.get_homepage_data = AsyncMock(side_effect=Exception("Error"))
+    
+    response = client.get("/v1/home")
+    
+    assert response.status_code == 500

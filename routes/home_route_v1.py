@@ -24,12 +24,12 @@ def get_database_repository() -> DatabaseRepository:
     return DatabaseRepository()
 
 
-def get_homepage_data() -> GetHomePageData:
+def get_homepage_data(repository: DatabaseRepository = Depends(get_database_repository)) -> GetHomePageData:
     """
     dependency to get the GetHomePageData use case instance.
     This allows for easy testing and mocking of the use case.
     """
-    return GetHomePageData(repository=get_database_repository())
+    return GetHomePageData(repository=repository)
 
 
 @router.get("/")

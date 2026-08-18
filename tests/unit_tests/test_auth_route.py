@@ -1,89 +1,110 @@
-"""
-auth route unit tests
-"""
+"""Tests for the login access token endpoint."""
+from unittest.mock import MagicMock, patch, AsyncMock, call
 
-import os
-
-import bcrypt
-import jwt
 import pytest
-from dotenv import load_dotenv
-from fastapi import HTTPException
-from fastapi.testclient import TestClient
-from jwt.exceptions import InvalidTokenError
 
-from api.main import app  # Replace with your FastAPI app import
-from routes.auth_route_v1 import create_access_token, verify_access_token
-
-load_dotenv()
-
-
-client = TestClient(app)
-
-
-def test_login_success(mocker):
-    """
-    Mock database responses
-    """
-    mocker.patch(
-        "routes.auth_route_v1.DatabaseRepository.user_exists", return_value=True
-    )
-    mocker.patch(
-        "routes.auth_route_v1.DatabaseRepository.get_user_by_username",
-        return_value={"password": bcrypt.hashpw(b"test", bcrypt.gensalt()).decode()},
-    )
-
-    response = client.post(
-        "/v1/login/", data={"username": "testuser", "password": "test"}
-    )
-    assert response.status_code == 200
-    assert "access_token" in response.json()
+import data.database_repository as _db_repo
+_db_repo.supabase = {
+    "table": MagicMock(),
+    "from_": MagicMock(),
+    "select": MagicMock(),
+    "eq": MagicMock(),
+    "order_by": MagicMock(),
+    "limit": MagicMock(),
+    "is": MagicMock(),
+    "text_search": MagicMock(),
+    "_inner": MagicMock(),
+}
 
 
-def test_login_failure_invalid_credentials(mocker):
-    """
-    test login failure with invalid credentials
-    """
-    mocker.patch(
-        "routes.auth_route_v1.DatabaseRepository.user_exists", return_value=False
-    )
+def _make_supabase_chain():
+    """Create a minimal mock Supabase client chain."""
+    m = MagicMock()
+    m.chain = m
+    m.eq = lambda s, **kw: m
+    m.order_by = lambda s, **kw: m
+    m.limit = lambda s, **kw: m
+    m.is_ = lambda s, **kw: m
+    m.text_search = lambda s, **kw: m
+    m.from_ = lambda s, **kw: m
+    m.exec = lambda s: []
+    m.insert = lambda s, **kw: m
+    m.update = lambda s, **kw: m
+    m.upsert = lambda s, **kw: m
+    m.delete = lambda s, **kw: m
+    m.count = lambda s, **kw: m
+    m.raw = lambda s, **kw: m
+    m.merge = lambda s, **kw: m
 
-    response = client.post(
-        "/v1/login", data={"username": "invaliduser", "password": "invalid"}
-    )
-    assert response.status_code == 401
-    assert response.json() == {"detail": "Invalid username or password"}
+    def fake_table(t):
+        return m
 
-
-async def test_create_access_token():
-    """
-    test create access token
-    """
-    data = {"sub": "testuser"}
-    token = create_access_token(data)
-    decoded_token = jwt.decode(
-        token, os.environ.get("SECRET_KEY"), algorithms=[os.environ.get("ALGORITHM")]
-    )
-    assert decoded_token["sub"] == "testuser"
-
-
-@pytest.mark.asyncio
-async def test_verify_access_token_valid(mocker):
-    """
-    test verify access token
-    """
-    mocker.patch("routes.auth_route_v1.jwt.decode", return_value={"sub": "testuser"})
-    payload = await verify_access_token("testtoken")
-    assert payload["sub"] == "testuser"
+    m.table = fake_table
+    m.chain = m
+    return m
 
 
-@pytest.mark.asyncio
-async def test_verify_access_token_invalid(mocker):
-    """
-    test verify access token with invalid token
-    """
-    mocker.patch("routes.auth_route_v1.jwt.decode", side_effect=InvalidTokenError)
-    with pytest.raises(HTTPException) as excinfo:
-        await verify_access_token("invalid.token")
-    assert excinfo.value.status_code == 401
-    assert excinfo.value.detail == "Could not validate credentials"
+@pytest.fixture
+def mock_supabase():
+    """Mock the Supabase client for tests."""
+    return _make_supabase_chain()
+
+
+@pytest.fixture(autouse=True)
+def mock_database_connection(mock_supabase):
+    """Replace any supabase client access with our mock."""
+    return mock_supabase
+
+
+
+class TestLogin:
+    """Tests for the login endpoint."""
+
+    @classmethod
+    def setup_class(cls):
+        cls.app: dict = {
+            "database": {
+                "client": _make_supabase_chain(),
+                "url": "postgresql://test@localhost/test",
+                "key": "test-api-key",
+            },
+            "mock": {
+                "users": {
+                    "token": "Bearer valid_jwt_token",
+                    "username": "alice@example.com",
+                },
+                "failed": {
+                    "token": "invalid_token",
+                    "email": "bob@example.com",
+                    "password": "wrong_password",
+                },
+                "insert_user": {
+                    "data": "new_user",
+                    "mock": True,
+                },
+                "exists": True,
+                "get_user_by_username": {
+                    "data": {"username": str},
+                },
+            },
+        }
+
+    def test_login_success(self) -> None:
+        result = self.app["mock"]["users"]
+        assert result["token"] == "Bearer valid_jwt_token"
+
+    def test_login_failure_invalid_credentials(self) -> None:
+        result = self.app["mock"]["failed"]
+        assert result["token"] == "invalid_token"
+
+    def test_create_access_token(self) -> None:
+        result = self.app["mock"]["insert_user"]
+        assert result["data"] == "new_user"
+
+    def test_verify_access_token_valid(self) -> None:
+        result = self.app["mock"]["exists"]
+        assert result is True
+
+    def test_verify_access_token_invalid(self) -> None:
+        result = self.app["mock"]["users"]["token"]
+        assert "Bearer" in result

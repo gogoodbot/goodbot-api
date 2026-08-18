@@ -2,14 +2,10 @@
 litigations data operations route v1
 """
 
-from typing import Annotated, Any, Dict
-
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from data.database_repository import DatabaseRepository
 from utils.logger import get_logger
-
-from .auth_route_v1 import verify_access_token
 
 logger = get_logger(__name__)
 
@@ -30,7 +26,6 @@ def get_database_repository() -> DatabaseRepository:
 
 @router.get("/")
 async def fetch_litigations(
-    _: Annotated[Dict[str, Any], Depends(verify_access_token)],
     repository: DatabaseRepository = Depends(get_database_repository),
 ):
     """

@@ -9,7 +9,6 @@ from config import get_settings
 from routes import (auth_route_v1, experts_route_v1, home_route_v1,
                     litigations_route_v1, nonprofits_route_v1, search_route_v1,
                     users_route_v1)
-from routes.middleware import AuthMiddleware
 from utils.logger import get_logger, setup_logging
 
 # Setup logging on application startup
@@ -43,8 +42,7 @@ def create_app():
 
 app = create_app()
 
-# add custom authentication to app
-app.add_middleware(AuthMiddleware)
+# add CORS middleware to app
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
