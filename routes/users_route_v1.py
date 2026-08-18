@@ -6,15 +6,18 @@ from typing import Annotated, Any, Dict
 
 import bcrypt
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
 
 from data.database_repository import DatabaseRepository
 from model.create_user_request_v1 import CreateUserRequest
 from model.user_response_v1 import UserResponse
 from utils.logger import get_logger
 
-from .auth_route_v1 import verify_access_token
-
 logger = get_logger(__name__)
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/v1/login/")
+
+from .auth_route_v1 import verify_access_token
 
 router = APIRouter(
     prefix="/users", tags=["users"], responses={404: {"description": "Not found"}}
@@ -31,12 +34,22 @@ def get_database_repository() -> DatabaseRepository:
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_user(
+    access_token: Annotated[Dict[str, Any], Depends(verify_access_token)],
     user: CreateUserRequest,
     repository: DatabaseRepository = Depends(get_database_repository),
 ):
     """
     hash and salt password, check if user already exists, insert user into database
     """
+    # check if user is authenticated
+    if not access_token:
+        logger.warning("Authentication failed - token missing or invalid")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     # Username is already lowercased by the validator
     username = user.username
 

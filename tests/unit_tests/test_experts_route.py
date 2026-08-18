@@ -1,86 +1,54 @@
-"""
-unit test class for experts route
-"""
-
-from unittest.mock import AsyncMock, MagicMock
-
 import pytest
+from unittest.mock import AsyncMock, MagicMock
 from fastapi.testclient import TestClient
-
 from api.main import app
-from data.database_repository import DatabaseRepository
-
-client = TestClient(app)
-
+from routes.experts_route_v1 import get_database_repository
 
 @pytest.fixture
-def mock_database_repository():
-    """
-    Mock DatabaseRepository for testing.
-    """
-    mock_repo = MagicMock(spec=DatabaseRepository)
-    mock_repo.get_experts = AsyncMock()
-    mock_repo.get_expert_by_id = AsyncMock()
-    return mock_repo
+def mock_repo():
+    # Create a mock object that can handle both sync and async methods
+    mock = MagicMock()
+    # Explicitly make the async methods AsyncMocks
+    mock.get_experts = AsyncMock()
+    mock.get_expert_by_id = AsyncMock()
+    return mock
 
+@pytest.fixture
+def client(mock_repo):
+    # Set up the dependency override
+    app.dependency_overrides[get_database_repository] = lambda: mock_repo
+    client = TestClient(app)
+    yield client
+    # Clean up overrides after the test
+    app.dependency_overrides = {}
 
-def test_get_experts(mocker):
-    """
-    Test the get_experts endpoint.
-    """
-    mock_experts = [
-        {"id": "1", "name": "Expert One"},
-        {"id": "2", "name": "Expert Two"},
-    ]
-    mocker.patch(
-        "routes.experts_route_v1.DatabaseRepository.get_experts",
-        return_value=mock_experts,
-    )
-
-    response = client.get("/v1/experts/")
+def test_get_experts_success(client, mock_repo):
+    mock_repo.get_experts.return_value = [{"id": 1, "name": "Expert 1"}]
+    
+    response = client.get("/v1/experts")
+    
     assert response.status_code == 200
-    assert response.json() == {"data": mock_experts}
+    assert len(response.json()["data"]) == 1
+    assert response.json()["data"][0]["name"] == "Expert 1"
 
-
-def test_get_expert_by_id(mocker):
-    """
-    Test the get_expert_by_id endpoint.
-    """
-    mock_expert = {"id": "1", "name": "Expert One"}
-    mocker.patch(
-        "routes.experts_route_v1.DatabaseRepository.get_expert_by_id",
-        return_value=mock_expert,
-    )
-
+def test_get_expert_by_id_success(client, mock_repo):
+    mock_repo.get_expert_by_id.return_value = {"id": 1, "name": "Expert 1"}
+    
     response = client.get("/v1/experts/1")
+    
     assert response.status_code == 200
-    assert response.json() == {"data": {"id": "1", "name": "Expert One"}}
+    assert response.json()["data"]["name"] == "Expert 1"
 
+def test_get_experts_error(client, mock_repo):
+    mock_repo.get_experts.side_effect = Exception("Database Error")
+    
+    response = client.get("/v1/experts")
+    
+    assert response.status_code == 500
 
-def test_get_experts_error(mocker):
-    """
-    Test error handling in get_experts endpoint.
-    """
-    # Mock an exception in the repository method
-    mocker.patch(
-        "routes.experts_route_v1.DatabaseRepository.get_experts",
-        side_effect=Exception("Database error"),
-    )
-
-    response = client.get("/v1/experts/?page_number=1&page_size=10")
-    assert response.status_code == 200
-    assert response.json() == {"message": "Error fetching paged experts"}
-
-
-def test_get_expert_by_id_error(mocker):
-    """
-    Test error handling in get_expert_by_id endpoint.
-    """
-    mocker.patch(
-        "routes.experts_route_v1.DatabaseRepository.get_expert_by_id",
-        side_effect=Exception("Error fetching expert by id"),
-    )
-
-    response = client.get("/v1/experts/1")
-    assert response.status_code == 200
-    assert response.json() == {"message": "Error fetching expert by id"}
+def test_get_expert_by_id_not_found(client, mock_repo):
+    mock_repo.get_expert_by_id.return_value = None
+    
+    response = client.get("/v1/experts/999")
+    
+    assert response.status_code == 404

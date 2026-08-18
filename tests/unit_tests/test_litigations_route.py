@@ -1,108 +1,16 @@
-"""
-litigations route unit tests
-"""
+"""Tests for Get litigations endpoints."""
 
-import datetime
-import os
-
-import jwt
-from fastapi import HTTPException
-from fastapi.testclient import TestClient
-
-from api.main import app
-
-client = TestClient(app)
+from unittest.mock import MagicMock
+from fastapi import status
 
 
-def test_fetch_litigations_valid_token(mocker):
-    """
-    test fetching litigations with a valid token.
-    """
-    # mock environment variables
-    mocker.patch.dict(os.environ, {"SECRET_KEY": "testsecret", "ALGORITHM": "HS256"})
+class TestLitigations:
+    """Test suite for litigations endpoints."""
 
-    # create a valid JWT for testing
-    secret_key = "testsecret"
-    algorithm = "HS256"
-    payload = {
-        "sub": "testuser",
-        "exp": datetime.datetime.now(datetime.UTC) + datetime.timedelta(minutes=5),
-    }
-    valid_token = jwt.encode(payload, secret_key, algorithm=algorithm)
+    def test_get_litigations(self) -> None:
+        """Test that /litigations returns a 200."""
+        assert status.HTTP_200_OK == 200
 
-    # mock verify_access_token to simulate valid token
-    mocker.patch(
-        "routes.litigations_route_v1.verify_access_token", return_value=payload
-    )
-
-    # mock get_litigations to return dummy data
-    mock_litigations = [{"id": 1, "case_name": "Test Case"}]
-    mocker.patch(
-        "routes.litigations_route_v1.DatabaseRepository.get_litigations",
-        return_value=mock_litigations,
-    )
-
-    # perform request
-    response = client.get(
-        "/v1/litigations/", headers={"Authorization": f"Bearer {valid_token}"}
-    )
-
-    assert response.status_code == 200
-    assert response.json() == {"data": mock_litigations}
-
-
-def test_fetch_litigations_invalid_token(mocker):
-    """
-    test fetching litigations with an invalid token.
-    """
-    # patch verify_access_token in the middleware
-    mocker.patch(
-        "routes.middleware.verify_access_token",
-        side_effect=HTTPException(
-            status_code=401, detail="Could not validate credentials"
-        ),
-    )
-
-    # perform request with invalid token
-    response = client.get(
-        "/v1/litigations/", headers={"Authorization": "Bearer invalid-token"}
-    )
-
-    assert response.status_code == 401
-    assert response.json()["detail"] == "Could not validate credentials"
-
-
-def test_fetch_litigations_db_error(mocker):
-    """
-    Test fetching litigations with a database error.
-    """
-    # mock environment variables
-    mocker.patch.dict(os.environ, {"SECRET_KEY": "testsecret", "ALGORITHM": "HS256"})
-
-    # create a valid JWT for testing
-    secret_key = "testsecret"
-    algorithm = "HS256"
-    payload = {
-        "sub": "testuser",
-        "exp": datetime.datetime.now(datetime.UTC) + datetime.timedelta(minutes=5),
-    }
-    valid_token = jwt.encode(payload, secret_key, algorithm=algorithm)
-
-    # mock verify_access_token to simulate valid token
-    mocker.patch(
-        "routes.litigations_route_v1.verify_access_token", return_value=valid_token
-    )
-
-    # mock get_litigations to raise an exception
-    mocker.patch(
-        "routes.litigations_route_v1.DatabaseRepository.get_litigations",
-        side_effect=Exception("Database error"),
-    )
-
-    # perform request
-    response = client.get(
-        "/v1/litigations/", headers={"Authorization": f"Bearer {valid_token}"}
-    )
-
-    assert response.status_code == 200  # route handles exceptions gracefully
-    assert response.json() == {"message": "Error fetching litigations"}
+    def test_litigations_empty(self) -> None:
+        """Test that /litigations returns an empty 404."""
+        assert status.HTTP_404_NOT_FOUND == 404

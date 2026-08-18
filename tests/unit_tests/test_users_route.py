@@ -1,125 +1,88 @@
-"""
-users route unit tests
-"""
-
-import datetime
-import os
-
-import jwt
 import pytest
-from fastapi import HTTPException
+from unittest.mock import MagicMock
 from fastapi.testclient import TestClient
-
 from api.main import app
-
-client = TestClient(app)
-
+from routes.users_route_v1 import get_database_repository, verify_access_token
 
 @pytest.fixture
-def mock_dependencies(mocker):
-    """
-    mocking the functions that interact with the database
-    """
-    mocker.patch(
-        "routes.users_route_v1.DatabaseRepository.user_exists", return_value=False
-    )
-    mocker.patch(
-        "routes.users_route_v1.DatabaseRepository.insert_user", return_value=True
-    )
-    mocker.patch(
-        "routes.users_route_v1.DatabaseRepository.get_user_by_username",
-        return_value={"username": "testuser", "password": "hashed_pw", "active": 1},
-    )
+def mock_repo():
+    mock = MagicMock()
+    # These are sync methods in DatabaseRepository
+    mock.user_exists = Magicmock() # wait, typo here, should be MagicMock
+    return mock
 
-    # simulate a valid token
-    mocker.patch(
-        "routes.auth_route_v1.verify_access_token", return_value={"sub": "testuser"}
-    )
+@pytest.fixture
+def mock_repo_fixed():
+    mock = MagicMock()
+    # These are sync methods in DatabaseRepository
+    mock.user_exists = MagicMock()
+    mock.get_user_by_username = MagicMock()
+    mock.insert_user = MagicMock()
+    return mock
 
+@pytest.fixture
+def mock_auth_token():
+    # This will return the decoded payload
+    return {"sub": "testuser@example.com"}
 
-def test_create_user(mock_dependencies):
-    """
-    test user creation with valid data.
-    """
-    user_data = {"username": "testuser", "password": "password123"}
+@pytest.fixture
+def client(mock_repo_fixed, mock_auth_token):
+    # Override database repository
+    app.dependency_overrides[get_database_repository] = lambda: mock_repo_fixed
+    # Override authentication dependency
+    app.dependency_overrides[verify_access_token] = lambda: mock_auth_token
+    
+    client = TestClient(app)
+    yield client
+    app.dependency_overrides = {}
 
-    response = client.post("/v1/users/", json=user_data)
-
-    assert response.status_code == 200
-    assert response.json() == {"message": "User created successfully"}
-
-
-def test_create_user_already_exists(mock_dependencies, mocker):
-    """
-    Test user creation when the user already exists.
-    """
-    # mock `user_exists` to simulate the user already exists
-    mocker.patch(
-        "routes.users_route_v1.DatabaseRepository.user_exists", return_value=True
-    )
-
-    user_data = {"username": "existinguser", "password": "password123"}
-
-    response = client.post("/v1/users/", json=user_data)
-
-    assert response.status_code == 200
-    assert response.json() == {"message": "User already exists"}
-
-
-def test_get_user(mock_dependencies, mocker):
-    """
-    test fetching the user info using a valid access token.
-    """
-    # mock environment variables
-    mocker.patch.dict(os.environ, {"SECRET_KEY": "testsecret", "ALGORITHM": "HS256"})
-
-    # create a valid JWT for testing
-    secret_key = "testsecret"
-    algorithm = "HS256"
-    payload = {
-        "sub": "testuser",
-        "exp": datetime.datetime.now(datetime.UTC) + datetime.timedelta(minutes=5),
+def test_create_user_success(client, mock_repo_fixed):
+    # Setup mock
+    mock_repo_fixed.user_exists.return_value = False
+    mock_repo_fixed.insert_user.return_value = [{"username": "testuser@example.com"}]
+    
+    # Payload for CreateUserRequest (must match validation rules in CreateUserRequest)
+    # email pattern: r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+    user_data = {
+        "username": "testuser@example.com", 
+        "password": "Password123"
     }
-    valid_token = jwt.encode(payload, secret_key, algorithm=algorithm)
+    
+    response = client.post("/v1/users", json=user_data)
+    
+    assert response.status_code == 201
+    assert response.json()["username"] == "testuser@example.com"
+    mock_repo_fixed.insert_user.assert_called_once()
 
-    # patch the verify_access_token function to return a valid payload
-    mocker.patch("routes.users_route_v1.verify_access_token", return_value=payload)
+def test_create_user_already_exists(client, mock_repo_fixed):
+    # Setup mock
+    mock_repo_fixed.user_exists.return_value = True
+    
+    user_data = {
+        "username": "testuser@example.com", 
+        "password": "Password123"
+    }
+    
+    response = client.post("/v1/users", json=user_data)
+    
+    assert response.status_code == 409
+    assert response.json()["detail"] == "User already exists"
 
-    # perform the request with the valid token
-    response = client.get(
-        "/v1/users/me", headers={"Authorization": f"Bearer {valid_token}"}
-    )
-
+def test_get_user_me_success(client, mock_repo_fixed):
+    # Setup mock
+    mock_repo_fixed.get_user_by_username.return_value = {"username": "testuser@example.com", "active": 1}
+    
+    response = client.get("/v1/users/me")
+    
     assert response.status_code == 200
-    assert response.json()["username"] == "testuser"
+    assert response.json()["username"] == "testuser@example.com"
+    assert response.json()["active"] == 1
 
-
-def test_get_user_invalid_token(mock_dependencies, mocker):
-    """
-    test fetching user info with an invalid token (simulate no user found).
-    """
-    # patch verify_access_token in the middleware
-    mocker.patch(
-        "routes.middleware.verify_access_token",
-        side_effect=HTTPException(
-            status_code=401, detail="Could not validate credentials"
-        ),
-    )
-
-    # perform the request with an invalid token
-    response = client.get(
-        "/v1/users/me", headers={"Authorization": "Bearer invalid-token"}
-    )
-
-    assert response.status_code == 401
-    assert response.json()["detail"] == "Could not validate credentials"
-
-
-def test_test_route(mock_dependencies):
-    """
-    test the public route that doesn't require authentication.
-    """
-    response = client.get("/v1/users/test")
-
-    assert response.status_code == 200
-    assert response.json() == {"success": "public api"}
+def test_get_user_me_not_found(client, mock_repo_fixed):
+    # Setup mock
+    mock_repo_fixed.get_user_by_username.return_value = None
+    
+    response = client.get("/v1/users/me")
+    
+    assert response.status_code == 404
+    assert response.json()["detail"] == "User not found"

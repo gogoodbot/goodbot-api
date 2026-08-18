@@ -37,10 +37,10 @@ def get_database_repository() -> DatabaseRepository:
 def authenticate_user(
     username: str,
     password: str,
-    repository: DatabaseRepository = Depends(get_database_repository),
+    repository: DatabaseRepository,
 ):
     """
-    verify if user exists in the database and check if password matches the hashed password
+    verify if user exists in the database and check if password matches the stored hashed password
     """
     try:
         # get user from database
@@ -53,22 +53,6 @@ def authenticate_user(
     except Exception as e:  # pylint: disable=broad-except
         logger.error(f"Error verifying user {username}: {e}")
         return False
-
-
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
-    """
-    encodes data and creates a jwt encoded access token
-    """
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=30)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(
-        to_encode, settings.secret_key, algorithm=settings.algorithm
-    )
-    return encoded_jwt
 
 
 @router.post("/", status_code=status.HTTP_200_OK)
@@ -90,7 +74,10 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user_authenticated = authenticate_user(form_data.username, form_data.password)
+    # authenticate the user by checking password hash
+    user_authenticated = authenticate_user(
+        form_data.username, form_data.password, repository
+    )
     if not user_authenticated:
         logger.warning(
             f"Login failed - invalid password for user: {form_data.username}"
@@ -116,6 +103,22 @@ async def login(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create access token",
         ) from e
+
+
+def create_access_token(data: dict, expires_delta: timedelta | None = None):
+    """
+    encodes data and creates a jwt encoded access token
+    """
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        expire = datetime.now(timezone.utc) + timedelta(minutes=30)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(
+        to_encode, settings.secret_key, algorithm=settings.algorithm
+    )
+    return encoded_jwt
 
 
 async def verify_access_token(
