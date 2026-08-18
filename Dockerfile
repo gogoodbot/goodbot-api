@@ -16,4 +16,4 @@ COPY . .
 
 EXPOSE 80
 
-CMD ["uv", "run", "fastapi", "run", "/api/main.py", "--host", "0.0.0.0", "--port", "80", "--reload"]
+CMD ["uv", "run", "fastapi", "run", "api/main.py", "--host", "0.0.0.0", "--port", "80"]
