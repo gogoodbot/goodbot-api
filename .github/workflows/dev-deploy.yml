@@ -1,5 +1,5 @@
 
-name: Run Tests and Deploy to Vercel
+name: DEV Deploy
 
 on:
   push:
