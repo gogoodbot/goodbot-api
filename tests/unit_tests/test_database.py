@@ -1,151 +1,415 @@
-"""Tests for database repository."""
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from unittest.mock import MagicMock, patch, PropertyMock
+import pytest
 
-import data.database_repository as db_repo
-
-
-# We need to provide the supabase attribute at module level since the real one never exists.
-# Re-set it to an empty dict so tests pass.
-try:
-    from data.database_repository import supabase
-    assert supabase is not None, "data.database_repository.supabase must exist"
-except AssertionError:
-    # Set the attribute that doesn't exist yet
-    setattr(db_repo, 'supabase', {})
-    import importlib
-    importlib.reload(db_repo)
+from data.database_repository import DatabaseRepository, get_database_client
 
 
-class TestUser:
-    """Tests for user operations."""
+class TestGetDatabaseClient:
+    def test_creates_database_client(self):
+        get_database_client.cache_clear()
 
-    @classmethod
-    def setup_class(cls):
-        cls._repo = db_repo
+        with patch("data.database_repository.create_client") as mock_create:
+            mock_create.return_value = MagicMock()
 
-    def _setup_mock(self):
-        """Set up mock users for each test."""
-        self.users = MagicMock()
-        self.users.select.return_value = self.users
-        self.users.eq.return_value = self.users
-        self.users.order_by.return_value = self.users
-        self.users.limit.return_value = self.users
-        self.users.exec.return_value = []
-        self.users.upsert.return_value = self.users
+            result = get_database_client()
 
-    def test_user_exists(self) -> None:
-        self._setup_mock()
-        self.users.eq().return_value = self.users
-        self.users.order_by().return_value = self.users
-        self.users.limit().return_value = self.users
-        return []
+            mock_create.assert_called_once()
+            assert result == mock_create.return_value
 
-    def test_get_user_by_username(self) -> None:
-        self._setup_mock()
-        self.users.eq().return_value = self.users
-        self.users.order_by().return_value = self.users
-        self.users.limit().return_value = self.users
-        return []
+    def test_returns_cached_client(self):
+        get_database_client.cache_clear()
 
-    def test_insert_user(self) -> None:
-        self._setup_mock()
-        return []
+        with patch("data.database_repository.create_client") as mock_create:
+            mock_create.return_value = MagicMock()
+
+            first = get_database_client()
+            second = get_database_client()
+
+            assert first is second
+            mock_create.assert_called_once()
 
 
-class TestExpert:
-    """Tests for expert operations."""
+class TestDatabaseRepository:
+    @pytest.fixture
+    def repository(self):
+        with patch("data.database_repository.get_database_client") as mock_client:
+            mock_client.return_value = MagicMock()
+            repo = DatabaseRepository()
+            yield repo
 
-    @classmethod
-    def setup_class(cls):
-        from data.database_repository import DatabaseRepository
-        cls._repo = DatabaseRepository
+    def test_user_exists_active_user(self, repository):
+        response = MagicMock()
+        response.data = [{"active": 1}]
+        repository.client.table.return_value.select.return_value.eq.return_value.execute.return_value = (
+            response
+        )
 
-    def _setup_mock(self):
-        self.experts = MagicMock()
-        self.experts.get.return_value = self.experts
+        result = repository.user_exists("TestUser")
 
-    def test_get_experts(self) -> None:
-        self._setup_mock()
-        self.experts().empty().return_value = []
-        return []
+        assert result is True
 
-    def test_get_expert_by_id(self) -> None:
-        self._setup_mock()
-        self.experts().empty().return_value = []
-        return []
+    def test_user_exists_inactive_user(self, repository):
+        response = MagicMock()
+        response.data = [{"active": 0}]
+        repository.client.table.return_value.select.return_value.eq.return_value.execute.return_value = (
+            response
+        )
 
+        assert repository.user_exists("TestUser") is False
 
-class TestSearch:
-    """Tests for search operations."""
+    def test_user_exists_user_not_found(self, repository):
+        response = MagicMock()
+        response.data = []
+        repository.client.table.return_value.select.return_value.eq.return_value.execute.return_value = (
+            response
+        )
 
-    @classmethod
-    def setup_class(cls):
-        from data.database_repository import DatabaseRepository
-        cls._repo = DatabaseRepository
+        assert repository.user_exists("TestUser") is False
 
-    def _setup_mock(self):
-        self.experts_empty = MagicMock()
-        self.experts_empty.return_value = self.experts_empty
+    def test_user_exists_exception(self, repository):
+        repository.client.table.side_effect = Exception("DB error")
 
-    def test_search_by_keywords(self) -> None:
-        self._setup_mock()
-        return []
+        assert repository.user_exists("TestUser") is False
 
+    def test_get_user_by_username(self, repository):
+        response = MagicMock()
+        response.data = [{"username": "testuser"}]
+        repository.client.table.return_value.select.return_value.eq.return_value.execute.return_value = (
+            response
+        )
 
-class TestLitigations:
-    """Tests for litigation operations."""
+        result = repository.get_user_by_username("TestUser")
 
-    @classmethod
-    def setup_class(cls):
-        from data.database_repository import DatabaseRepository
-        cls._repo = DatabaseRepository
+        assert result == {"username": "testuser"}
 
-    def _setup_mock(self):
-        self.entities = MagicMock()
-        self.entities.upsert.return_value = self.entities
-        self.entities.select.return_value = self.entities
+    def test_get_user_by_username_exception(self, repository):
+        repository.client.table.side_effect = Exception("DB error")
 
-    def test_get_litigations(self) -> None:
-        self._setup_mock()
-        self.entities.select().return_value = []
-        return []
+        assert repository.get_user_by_username("TestUser") is None
 
+    def test_insert_user(self, repository):
+        response = MagicMock()
+        response.data = [{"username": "testuser"}]
+        repository.client.table.return_value.insert.return_value.execute.return_value = (
+            response
+        )
 
-class TestNonprofits:
-    """Tests for nonprofit operations."""
+        result = repository.insert_user("TestUser", "hashed-password")
 
-    @classmethod
-    def setup_class(cls):
-        from data.database_repository import DatabaseRepository
-        cls._repo = DatabaseRepository
+        assert result == response.data
+        repository.client.table.return_value.insert.assert_called_once_with(
+            {
+                "username": "testuser",
+                "password": "hashed-password",
+            }
+        )
 
-    def _setup_mock(self):
-        self.entities = MagicMock()
-        self.entities.upsert.return_value = self.entities
-        self.entities.select.return_value = self.entities
+    def test_insert_user_exception(self, repository):
+        repository.client.table.side_effect = Exception("DB error")
 
-    def test_get_nonprofits(self) -> None:
-        self._setup_mock()
-        self.entities.select().mock = self.entities
-        return []
+        assert repository.insert_user("TestUser", "hash") is None
 
-    def test_get_entity_by_nonprofit_id(self) -> None:
-        self._setup_mock()
-        return []
+    def test_get_litigations(self, repository):
+        response = MagicMock()
+        response.data = [{"id": 1}]
+        repository.client.table.return_value.select.return_value.execute.return_value = (
+            response
+        )
 
-    def test_get_nonprofits_error(self) -> None:
-        self._setup_mock()
-        return []
+        assert repository.get_litigations() == response.data
 
-    def test_get_entity_by_nonprofit_id_error(self) -> None:
-        self._setup_mock()
-        return []
+    def test_get_litigations_exception(self, repository):
+        repository.client.table.side_effect = Exception("DB error")
 
+        assert repository.get_litigations() is None
 
-class TestEntity:
-    """Tests for entity operations."""
+    @pytest.mark.asyncio
+    async def test_get_homepage_data(self, repository):
+        response = MagicMock()
+        response.data = [{"id": 1}]
+        repository.client.rpc.return_value.execute.return_value = response
 
-    def test_get_entity_by_nonprofit_id(self) -> None:
-        # This entity test should pass
-        return []
+        result = await repository.get_homepage_data()
+
+        assert result == response.data
+        repository.client.rpc.assert_called_once_with("get_homepage_data2")
+
+    @pytest.mark.asyncio
+    async def test_get_homepage_data_exception(self, repository):
+        repository.client.rpc.side_effect = Exception("DB error")
+
+        assert await repository.get_homepage_data() is None
+
+    @pytest.mark.asyncio
+    async def test_get_structural_subfactors(self, repository):
+        response = MagicMock()
+        response.data = [{"id": 1}]
+        repository.client.table.return_value.select.return_value.execute.return_value = (
+            response
+        )
+
+        assert await repository.get_structural_subfactors() == response.data
+
+    @pytest.mark.asyncio
+    async def test_get_structural_subfactors_exception(self, repository):
+        repository.client.table.side_effect = Exception("DB error")
+
+        assert await repository.get_structural_subfactors() is None
+
+    @pytest.mark.asyncio
+    async def test_get_experts_paginated(self, repository):
+        response = MagicMock()
+        response.data = [{"id": 1}]
+        repository.client.table.return_value.select.return_value.range.return_value.execute.return_value = (
+            response
+        )
+
+        result = await repository.get_experts(page_number=2, page_size=10)
+
+        assert result == response.data
+        repository.client.table.return_value.select.return_value.range.assert_called_once_with(
+            10, 19
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_experts_all(self, repository):
+        response = MagicMock()
+        response.data = [{"id": 1}]
+        repository.client.table.return_value.select.return_value.execute.return_value = (
+            response
+        )
+
+        result = await repository.get_experts(page_size=-1)
+
+        assert result == response.data
+
+    @pytest.mark.asyncio
+    async def test_get_experts_exception(self, repository):
+        repository.client.table.side_effect = Exception("DB error")
+
+        assert await repository.get_experts() is None
+
+    @pytest.mark.asyncio
+    async def test_get_expert_by_id(self, repository):
+        response = MagicMock()
+        response.data = [{"id": "123"}]
+        repository.client.table.return_value.select.return_value.eq.return_value.execute.return_value = (
+            response
+        )
+
+        assert await repository.get_expert_by_id("123") == response.data
+
+    @pytest.mark.asyncio
+    async def test_get_expert_by_id_exception(self, repository):
+        repository.client.table.side_effect = Exception("DB error")
+
+        assert await repository.get_expert_by_id("123") is None
+
+    @pytest.mark.asyncio
+    async def test_update_expert_by_id(self, repository):
+        response = MagicMock()
+        response.data = [{"id": "123", "name": "Updated"}]
+        repository.client.table.return_value.update.return_value.eq.return_value.execute.return_value = (
+            response
+        )
+
+        result = await repository.update_expert_by_id("123", {"name": "Updated"})
+
+        assert result == response.data
+
+    @pytest.mark.asyncio
+    async def test_update_expert_by_id_exception(self, repository):
+        repository.client.table.side_effect = Exception("DB error")
+
+        assert await repository.update_expert_by_id("123", {}) is None
+
+    @pytest.mark.asyncio
+    async def test_get_nonprofits(self, repository):
+        response = MagicMock()
+        response.data = [{"id": "np1"}, {"id": "np2"}]
+        repository.client.table.return_value.select.return_value.range.return_value.execute.return_value = (
+            response
+        )
+
+        repository.get_entity_by_nonprofit_id = AsyncMock(
+            side_effect=[
+                [{"id": "entity1"}],
+                [{"id": "entity2"}],
+            ]
+        )
+
+        result = await repository.get_nonprofits(1, 2)
+
+        assert result == [{"id": "entity1"}, {"id": "entity2"}]
+
+    @pytest.mark.asyncio
+    async def test_get_nonprofits_no_data(self, repository):
+        response = MagicMock()
+        response.data = []
+        repository.client.table.return_value.select.return_value.range.return_value.execute.return_value = (
+            response
+        )
+
+        assert await repository.get_nonprofits() is None
+
+    @pytest.mark.asyncio
+    async def test_get_nonprofits_exception(self, repository):
+        repository.client.table.side_effect = Exception("DB error")
+
+        assert await repository.get_nonprofits() is None
+
+    @pytest.mark.asyncio
+    async def test_get_entity_by_nonprofit_id(self, repository):
+        response = MagicMock()
+        response.data = [{"id": "np1"}]
+        repository.client.table.return_value.select.return_value.eq.return_value.execute.return_value = (
+            response
+        )
+
+        assert await repository.get_entity_by_nonprofit_id("np1") == response.data
+
+    @pytest.mark.asyncio
+    async def test_get_entity_by_nonprofit_id_exception(self, repository):
+        repository.client.table.side_effect = Exception("DB error")
+
+        assert await repository.get_entity_by_nonprofit_id("np1") is None
+
+    @pytest.mark.asyncio
+    async def test_get_entity_by_id(self, repository):
+        response = MagicMock()
+        response.data = [{"id": "entity1"}]
+        repository.client.table.return_value.select.return_value.eq.return_value.execute.return_value = (
+            response
+        )
+
+        assert await repository.get_entity_by_id("entity1") == response.data
+
+    @pytest.mark.asyncio
+    async def test_get_entity_by_id_exception(self, repository):
+        repository.client.table.side_effect = Exception("DB error")
+
+        assert await repository.get_entity_by_id("entity1") is None
+
+    @pytest.mark.asyncio
+    async def test_get_entities_paginated(self, repository):
+        response = MagicMock()
+        response.data = [{"id": 1}]
+        repository.client.table.return_value.select.return_value.range.return_value.execute.return_value = (
+            response
+        )
+
+        result = await repository.get_entities(2, 4)
+
+        assert result == response.data
+        repository.client.table.return_value.select.return_value.range.assert_called_once_with(
+            4, 7
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_entities_all(self, repository):
+        response = MagicMock()
+        response.data = [{"id": 1}]
+        repository.client.table.return_value.select.return_value.execute.return_value = (
+            response
+        )
+
+        assert await repository.get_entities(page_size=-1) == response.data
+
+    @pytest.mark.asyncio
+    async def test_get_entities_exception(self, repository):
+        repository.client.table.side_effect = Exception("DB error")
+
+        assert await repository.get_entities() is None
+
+    @pytest.mark.asyncio
+    async def test_update_entity_by_id(self, repository):
+        response = MagicMock()
+        response.data = [{"id": "entity1", "name": "Updated"}]
+        repository.client.table.return_value.update.return_value.eq.return_value.execute.return_value = (
+            response
+        )
+
+        result = await repository.update_entity_by_id("entity1", {"name": "Updated"})
+
+        assert result == response.data
+
+    @pytest.mark.asyncio
+    async def test_update_entity_by_id_exception(self, repository):
+        repository.client.table.side_effect = Exception("DB error")
+
+        assert await repository.update_entity_by_id("entity1", {}) is None
+
+    @pytest.mark.asyncio
+    async def test_search_by_keywords(self, repository):
+        entity_response = MagicMock()
+        entity_response.data = [{"id": "entity1"}]
+
+        expert_response = MagicMock()
+        expert_response.data = [{"id": "expert1"}]
+
+        entity_search_response = MagicMock()
+        entity_search_response.data = [{"id": "entity1"}]
+
+        repository.client.from_.return_value.select.return_value.text_search.return_value.execute.return_value = (
+            entity_response
+        )
+        repository.client.rpc.return_value.execute.side_effect = [
+            expert_response,
+            entity_search_response,
+        ]
+
+        nonprofit_response = MagicMock()
+        nonprofit_response.data = [{"id": "np1", "entity_id": "entity1"}]
+
+        repository.client.table.return_value.select.return_value.eq.return_value.execute.return_value = (
+            nonprofit_response
+        )
+
+        result = await repository.search_by_keywords("education health")
+
+        assert result == {
+            "nonprofits": [{"id": "entity1"}],
+            "experts": [{"id": "expert1"}],
+        }
+
+    @pytest.mark.asyncio
+    async def test_search_by_keywords_removes_special_characters(self, repository):
+        entity_response = MagicMock()
+        entity_response.data = []
+
+        expert_response = MagicMock()
+        expert_response.data = []
+
+        entity_search_response = MagicMock()
+        entity_search_response.data = []
+
+        repository.client.from_.return_value.select.return_value.text_search.return_value.execute.return_value = (
+            entity_response
+        )
+        repository.client.rpc.return_value.execute.side_effect = [
+            expert_response,
+            entity_search_response,
+        ]
+
+        result = await repository.search_by_keywords("hello! @world#")
+
+        assert result == {
+            "nonprofits": [],
+            "experts": [],
+        }
+
+    @pytest.mark.asyncio
+    async def test_search_by_keywords_empty_after_sanitization(self, repository):
+        result = await repository.search_by_keywords("!@#$%^&*()")
+
+        assert result == {
+            "nonprofits": [],
+            "experts": [],
+        }
+
+    @pytest.mark.asyncio
+    async def test_search_by_keywords_exception(self, repository):
+        repository.client.from_.side_effect = Exception("DB error")
+
+        assert await repository.search_by_keywords("test") is None

@@ -1,110 +1,231 @@
-"""Tests for the login access token endpoint."""
-from unittest.mock import MagicMock, patch, AsyncMock, call
+from datetime import timedelta
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
+import bcrypt
+import jwt
 import pytest
+from fastapi import HTTPException
 
-import data.database_repository as _db_repo
-_db_repo.supabase = {
-    "table": MagicMock(),
-    "from_": MagicMock(),
-    "select": MagicMock(),
-    "eq": MagicMock(),
-    "order_by": MagicMock(),
-    "limit": MagicMock(),
-    "is": MagicMock(),
-    "text_search": MagicMock(),
-    "_inner": MagicMock(),
-}
+from routes import auth_route_v1
 
 
-def _make_supabase_chain():
-    """Create a minimal mock Supabase client chain."""
-    m = MagicMock()
-    m.chain = m
-    m.eq = lambda s, **kw: m
-    m.order_by = lambda s, **kw: m
-    m.limit = lambda s, **kw: m
-    m.is_ = lambda s, **kw: m
-    m.text_search = lambda s, **kw: m
-    m.from_ = lambda s, **kw: m
-    m.exec = lambda s: []
-    m.insert = lambda s, **kw: m
-    m.update = lambda s, **kw: m
-    m.upsert = lambda s, **kw: m
-    m.delete = lambda s, **kw: m
-    m.count = lambda s, **kw: m
-    m.raw = lambda s, **kw: m
-    m.merge = lambda s, **kw: m
+class TestGetDatabaseRepository:
+    def test_returns_database_repository(self):
+        with patch("routes.auth_route_v1.DatabaseRepository") as mock_repository:
+            result = auth_route_v1.get_database_repository()
 
-    def fake_table(t):
-        return m
-
-    m.table = fake_table
-    m.chain = m
-    return m
+            mock_repository.assert_called_once()
+            assert result == mock_repository.return_value
 
 
-@pytest.fixture
-def mock_supabase():
-    """Mock the Supabase client for tests."""
-    return _make_supabase_chain()
+class TestAuthenticateUser:
+    def test_authenticates_valid_user(self):
+        repository = MagicMock()
+        password = "password123"
+        hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
+        repository.get_user_by_username.return_value = {
+            "username": "testuser",
+            "password": hashed_password,
+        }
 
-@pytest.fixture(autouse=True)
-def mock_database_connection(mock_supabase):
-    """Replace any supabase client access with our mock."""
-    return mock_supabase
+        result = auth_route_v1.authenticate_user("testuser", password, repository)
 
+        assert result is True
+        repository.get_user_by_username.assert_called_once_with(username="testuser")
+
+    def test_returns_false_when_user_does_not_exist(self):
+        repository = MagicMock()
+        repository.get_user_by_username.return_value = None
+
+        result = auth_route_v1.authenticate_user("testuser", "password", repository)
+
+        assert result is False
+
+    def test_returns_false_for_invalid_password(self):
+        repository = MagicMock()
+        repository.get_user_by_username.return_value = {
+            "username": "testuser",
+            "password": bcrypt.hashpw(b"correct-password", bcrypt.gensalt()).decode(),
+        }
+
+        result = auth_route_v1.authenticate_user(
+            "testuser", "wrong-password", repository
+        )
+
+        assert result is False
+
+    def test_returns_false_when_repository_raises_exception(self):
+        repository = MagicMock()
+        repository.get_user_by_username.side_effect = Exception("DB error")
+
+        result = auth_route_v1.authenticate_user("testuser", "password", repository)
+
+        assert result is False
 
 
 class TestLogin:
-    """Tests for the login endpoint."""
+    @pytest.mark.asyncio
+    async def test_login_user_not_found(self):
+        repository = MagicMock()
+        repository.user_exists.return_value = False
 
-    @classmethod
-    def setup_class(cls):
-        cls.app: dict = {
-            "database": {
-                "client": _make_supabase_chain(),
-                "url": "postgresql://test@localhost/test",
-                "key": "test-api-key",
-            },
-            "mock": {
-                "users": {
-                    "token": "Bearer valid_jwt_token",
-                    "username": "alice@example.com",
-                },
-                "failed": {
-                    "token": "invalid_token",
-                    "email": "bob@example.com",
-                    "password": "wrong_password",
-                },
-                "insert_user": {
-                    "data": "new_user",
-                    "mock": True,
-                },
-                "exists": True,
-                "get_user_by_username": {
-                    "data": {"username": str},
-                },
-            },
-        }
+        form_data = SimpleNamespace(
+            username="testuser",
+            password="password",
+        )
 
-    def test_login_success(self) -> None:
-        result = self.app["mock"]["users"]
-        assert result["token"] == "Bearer valid_jwt_token"
+        with pytest.raises(HTTPException) as exc_info:
+            await auth_route_v1.login(form_data, repository)
 
-    def test_login_failure_invalid_credentials(self) -> None:
-        result = self.app["mock"]["failed"]
-        assert result["token"] == "invalid_token"
+        assert exc_info.value.status_code == 401
+        assert exc_info.value.detail == "Invalid username or password"
+        assert exc_info.value.headers["WWW-Authenticate"] == "Bearer"
 
-    def test_create_access_token(self) -> None:
-        result = self.app["mock"]["insert_user"]
-        assert result["data"] == "new_user"
+    @pytest.mark.asyncio
+    async def test_login_invalid_password(self):
+        repository = MagicMock()
+        repository.user_exists.return_value = True
 
-    def test_verify_access_token_valid(self) -> None:
-        result = self.app["mock"]["exists"]
-        assert result is True
+        with patch("routes.auth_route_v1.authenticate_user", return_value=False):
+            form_data = SimpleNamespace(
+                username="testuser",
+                password="wrong-password",
+            )
 
-    def test_verify_access_token_invalid(self) -> None:
-        result = self.app["mock"]["users"]["token"]
-        assert "Bearer" in result
+            with pytest.raises(HTTPException) as exc_info:
+                await auth_route_v1.login(form_data, repository)
+
+        assert exc_info.value.status_code == 401
+        assert exc_info.value.detail == "Incorrect username or password"
+
+    @pytest.mark.asyncio
+    async def test_login_success(self):
+        repository = MagicMock()
+        repository.user_exists.return_value = True
+
+        form_data = SimpleNamespace(
+            username="testuser",
+            password="password",
+        )
+
+        with patch("routes.auth_route_v1.authenticate_user", return_value=True), patch(
+            "routes.auth_route_v1.create_access_token",
+            return_value="test-token",
+        ):
+            result = await auth_route_v1.login(form_data, repository)
+
+        assert result.access_token == "test-token"
+        assert result.token_type == "bearer"
+
+    @pytest.mark.asyncio
+    async def test_login_token_creation_failure(self):
+        repository = MagicMock()
+        repository.user_exists.return_value = True
+
+        form_data = SimpleNamespace(
+            username="testuser",
+            password="password",
+        )
+
+        with patch("routes.auth_route_v1.authenticate_user", return_value=True), patch(
+            "routes.auth_route_v1.create_access_token",
+            side_effect=Exception("JWT error"),
+        ):
+            with pytest.raises(HTTPException) as exc_info:
+                await auth_route_v1.login(form_data, repository)
+
+        assert exc_info.value.status_code == 500
+        assert exc_info.value.detail == "Failed to create access token"
+
+
+class TestCreateAccessToken:
+    def test_creates_token_with_expiration(self):
+        expires_delta = timedelta(minutes=10)
+        data = {"sub": "testuser"}
+
+        token = auth_route_v1.create_access_token(data, expires_delta)
+
+        payload = jwt.decode(
+            token,
+            auth_route_v1.settings.secret_key,
+            algorithms=[auth_route_v1.settings.algorithm],
+        )
+
+        assert payload["sub"] == "testuser"
+        assert "exp" in payload
+
+    def test_creates_token_with_default_expiration(self):
+        data = {"sub": "testuser"}
+
+        token = auth_route_v1.create_access_token(data)
+
+        payload = jwt.decode(
+            token,
+            auth_route_v1.settings.secret_key,
+            algorithms=[auth_route_v1.settings.algorithm],
+        )
+
+        assert payload["sub"] == "testuser"
+        assert "exp" in payload
+
+
+class TestVerifyAccessToken:
+    @pytest.mark.asyncio
+    async def test_returns_payload_for_valid_token(self):
+        token = auth_route_v1.create_access_token(
+            {"sub": "testuser"},
+            timedelta(minutes=10),
+        )
+
+        result = await auth_route_v1.verify_access_token(token)
+
+        assert result["sub"] == "testuser"
+        assert "exp" in result
+
+    @pytest.mark.asyncio
+    async def test_rejects_token_without_username(self):
+        token = auth_route_v1.create_access_token(
+            {"some_claim": "value"},
+            timedelta(minutes=10),
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await auth_route_v1.verify_access_token(token)
+
+        assert exc_info.value.status_code == 401
+        assert exc_info.value.detail == "Could not validate credentials"
+
+    @pytest.mark.asyncio
+    async def test_rejects_expired_token(self):
+        token = auth_route_v1.create_access_token(
+            {"sub": "testuser"},
+            timedelta(seconds=-1),
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await auth_route_v1.verify_access_token(token)
+
+        assert exc_info.value.status_code == 401
+        assert exc_info.value.detail == "Token has expired"
+
+    @pytest.mark.asyncio
+    async def test_rejects_invalid_token(self):
+        with pytest.raises(HTTPException) as exc_info:
+            await auth_route_v1.verify_access_token("invalid-token")
+
+        assert exc_info.value.status_code == 401
+        assert exc_info.value.detail == "Could not validate credentials"
+
+    @pytest.mark.asyncio
+    async def test_handles_unexpected_error(self):
+        with patch(
+            "routes.auth_route_v1.jwt.decode",
+            side_effect=RuntimeError("Unexpected error"),
+        ):
+            with pytest.raises(HTTPException) as exc_info:
+                await auth_route_v1.verify_access_token("some-token")
+
+        assert exc_info.value.status_code == 401
+        assert exc_info.value.detail == "Could not validate credentials"
