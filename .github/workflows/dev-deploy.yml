@@ -38,7 +38,7 @@ jobs:
           echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> $GITHUB_ENV
 
       - name: Run tests
-        run: pytest
+        run: uv run pytest
 
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
