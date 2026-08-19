@@ -4,18 +4,17 @@
 
 ### Environment Setup
 ```bash
-# Create and activate virtual environment
-python -m venv venv
-source venv/bin/activate
+# Install dependencies (including dev tools)
+uv sync
 
-# Install dependencies
-pip install -r requirements.txt
+# Install production dependencies only
+uv sync --no-dev
 ```
 
 ### Running the Application
 ```bash
 # Development mode (with auto-reload)
-fastapi dev api/main.py
+uv run fastapi dev api/main.py
 
 # Production mode with Docker
 sudo docker build -t api . && sudo docker run -d -p 80:80 --env-file .env api
@@ -24,13 +23,13 @@ sudo docker build -t api . && sudo docker run -d -p 80:80 --env-file .env api
 ### Testing
 ```bash
 # Run all unit tests
-pytest tests/unit_tests
+uv run pytest tests/unit_tests
 
 # Run specific test file
-pytest tests/unit_tests/test_search_route.py
+uv run pytest tests/unit_tests/test_search_route.py
 
 # Run with verbose output
-pytest tests/unit_tests -v
+uv run pytest tests/unit_tests -v
 ```
 
 ### Code Quality

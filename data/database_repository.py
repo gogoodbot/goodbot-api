@@ -193,6 +193,8 @@ class DatabaseRepository:
                 entity = await self.get_entity_by_nonprofit_id(nonprofit["id"])
                 if entity:
                     entities.append(entity[0])
+                    # add nonprofit_id to entity data
+                    entities[-1]["nonprofit_id"] = nonprofit["id"]
 
             return entities
         except Exception as e:  # pylint: disable=broad-except
@@ -207,10 +209,17 @@ class DatabaseRepository:
         """
         try:
             response = (
-                self.client.table("entities")
-                .select("*")
+                self.client.table("nonprofits")
+                .select("entity_id")
                 .eq("id", nonprofit_id)
                 .execute()
+            )
+            if not response.data:
+                print(f"Error getting entity by nonprofit id: {response}")
+                return None
+            entity_id = response.data[0]["entity_id"]
+            response = (
+                self.client.table("entities").select("*").eq("id", entity_id).execute()
             )
             return response.data
         except Exception as e:  # pylint: disable=broad-except

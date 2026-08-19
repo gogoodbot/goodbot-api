@@ -26,22 +26,18 @@ goodbot-api
 ### Installation
 
 1. Install [Python](https://www.python.org/downloads/)
-2. Install [pip](https://pip.pypa.io/en/stable/installing/)
-3. Create a virtual environment via `python -m venv [virtual_environment_name]`
-4. Activate the virtual environment via `source [virtual_environment_name]/bin/activate`
-5. Install the dependencies via `pip install -r requirements.txt`
+2. Install [uv](https://docs.astral.sh/uv/)
+3. Install dependencies via `uv sync`
 
 ### Running the Application Locally
 
-1. Activate the virtual environment via `source [virtual_environment_name]/bin/activate`
-2. Run the application via `fastapi dev api/main.py`
-3. The application should be available at `http://127.0.0.1:8000`
-4. To stop the application, press `Ctrl + C`
+1. Run the application via `uv run fastapi dev api/main.py`
+2. The application should be available at `http://127.0.0.1:8000`
+3. To stop the application, press `Ctrl + C`
 
 ### Running the Unit Tests
 
-1. Activate the virtual environment via `source [virtual_environment_name]/bin/activate`
-2. Run the unit tests via `pytest tests/unit_tests`
+1. Run the unit tests via `uv run pytest tests/unit_tests`
 
 ### Running the Application with Docker
 
