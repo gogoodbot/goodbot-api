@@ -241,7 +241,10 @@ class TestDatabaseRepository:
 
         result = await repository.get_nonprofits(1, 2)
 
-        assert result == [{"id": "entity1"}, {"id": "entity2"}]
+        assert result == [
+            {"id": "entity1", "nonprofit_id": "np1"},
+            {"id": "entity2", "nonprofit_id": "np2"},
+        ]
 
     @pytest.mark.asyncio
     async def test_get_nonprofits_no_data(self, repository):
@@ -262,7 +265,7 @@ class TestDatabaseRepository:
     @pytest.mark.asyncio
     async def test_get_entity_by_nonprofit_id(self, repository):
         response = MagicMock()
-        response.data = [{"id": "np1"}]
+        response.data = [{"id": "np1", "entity_id": "entity1"}]
         repository.client.table.return_value.select.return_value.eq.return_value.execute.return_value = (
             response
         )
