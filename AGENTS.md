@@ -35,10 +35,10 @@ uv run pytest tests/unit_tests -v
 ### Code Quality
 ```bash
 # Format code with black
-black .
+uv run black .
 
 # Sort imports
-isort .
+uv run isort .
 ```
 
 ## Architecture & Patterns

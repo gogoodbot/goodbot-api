@@ -5,7 +5,7 @@ A backend application for the GoodBot Project written in Python using the FastAP
 ### Prerequisites
 
 - Python 3.12
-- pip
+- [uv](https://docs.astral.sh/uv/)
 - FastAPI
 - pytest
 
