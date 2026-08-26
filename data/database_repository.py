@@ -2,7 +2,6 @@
 database operations module
 """
 
-import re
 from functools import lru_cache
 
 from supabase import Client, create_client
@@ -100,7 +99,7 @@ class DatabaseRepository:
             response = self.client.rpc("get_homepage_data2").execute()
             return response.data
         except Exception as e:  # pylint: disable=broad-except
-            print(f"Error getting homepage data: {e}")
+            logger.error(f"Error getting homepage data: {e}")
             return None
 
     async def get_structural_subfactors(self):
@@ -111,7 +110,7 @@ class DatabaseRepository:
             response = self.client.table("structural_sub_factors").select("*").execute()
             return response.data
         except Exception as e:  # pylint: disable=broad-except
-            print(f"Error getting all structural subfactors: {e}")
+            logger.error(f"Error getting all structural subfactors: {e}")
             return None
 
     async def get_experts(self, page_number: int = 1, page_size: int = 10):
@@ -134,7 +133,7 @@ class DatabaseRepository:
             )
             return response.data
         except Exception as e:  # pylint: disable=broad-except
-            print(f"Error getting all experts: {e}")
+            logger.error(f"Error getting all experts: {e}")
             return None
 
     async def get_expert_by_id(self, expert_id: str):
@@ -149,7 +148,7 @@ class DatabaseRepository:
             )
             return response.data
         except Exception as e:  # pylint: disable=broad-except
-            print(f"Error getting expert by id: {e}")
+            logger.error(f"Error getting expert by id: {e}")
             return None
 
     async def update_expert_by_id(self, expert_id: str, update_data: dict):
@@ -168,7 +167,7 @@ class DatabaseRepository:
             )
             return response.data
         except Exception as e:  # pylint: disable=broad-except
-            print(f"Error updating expert by id: {e}")
+            logger.error(f"Error updating expert by id: {e}")
             return None
 
     async def get_nonprofits(self, page_number: int = 1, page_size: int = 4):
@@ -186,19 +185,17 @@ class DatabaseRepository:
                 .execute()
             )
             if not response.data:
-                print(f"Error getting all nonprofits: {response}")
+                logger.error(f"Error getting all nonprofits: {response}")
                 return None
             entities = []
             for nonprofit in response.data:
                 entity = await self.get_entity_by_nonprofit_id(nonprofit["id"])
                 if entity:
                     entities.append(entity[0])
-                    # add nonprofit_id to entity data
-                    entities[-1]["nonprofit_id"] = nonprofit["id"]
 
             return entities
         except Exception as e:  # pylint: disable=broad-except
-            print(f"Error getting all nonprofits: {e}")
+            logger.error(f"Error getting all nonprofits: {e}")
             return None
 
     async def get_entity_by_nonprofit_id(self, nonprofit_id: str):
@@ -215,15 +212,16 @@ class DatabaseRepository:
                 .execute()
             )
             if not response.data:
-                print(f"Error getting entity by nonprofit id: {response}")
+                logger.error(f"Error getting entity by nonprofit id: {response}")
                 return None
+
             entity_id = response.data[0]["entity_id"]
             response = (
                 self.client.table("entities").select("*").eq("id", entity_id).execute()
             )
             return response.data
         except Exception as e:  # pylint: disable=broad-except
-            print(f"Error getting entity by nonprofit id: {e}")
+            logger.error(f"Error getting entity by nonprofit id: {e}")
             return None
 
     async def get_entity_by_id(self, entity_id: str):
@@ -238,7 +236,7 @@ class DatabaseRepository:
             )
             return response.data
         except Exception as e:  # pylint: disable=broad-except
-            print(f"Error getting entity by id: {e}")
+            logger.error(f"Error getting entity by id: {e}")
             return None
 
     async def get_entities(self, page_number: int = 1, page_size: int = 4):
@@ -261,7 +259,7 @@ class DatabaseRepository:
             )
             return response.data
         except Exception as e:  # pylint: disable=broad-except
-            print(f"Error getting all entities: {e}")
+            logger.error(f"Error getting all entities: {e}")
             return None
 
     async def update_entity_by_id(self, entity_id: str, update_data: dict):
@@ -280,7 +278,7 @@ class DatabaseRepository:
             )
             return response.data
         except Exception as e:  # pylint: disable=broad-except
-            print(f"Error updating entity by id: {e}")
+            logger.error(f"Error updating entity by id: {e}")
             return None
 
     async def search_by_keywords(self, keywords: str):
@@ -290,59 +288,11 @@ class DatabaseRepository:
         :return: list of entities, nonprofits and experts matching the keywords
         """
         try:
-            # Sanitize input - remove special characters except alphanumeric, spaces, and hyphens
-            keywords = re.sub(r"[^a-zA-Z0-9\s\-]", "", keywords)
-
-            # Limit length to prevent DoS
-            keywords = keywords[:500]
-
-            # turn string keywords into an array or keywords
-            keywords = keywords.replace(" ", ",")
-            keywords_array = keywords.split(",")
-            # Filter out empty strings
-            keywords_array = [k.strip() for k in keywords_array if k.strip()]
-
-            if not keywords_array:
-                logger.warning("No valid keywords after sanitization")
-                return {"nonprofits": [], "experts": []}
-
-            # add single quotes (') around each keyword
-            keywords_array = [f"'{keyword}'" for keyword in keywords_array]
-            # join the keywords with | operator for full text search
-            keywords = " | ".join(keywords_array)
-
-            result_entities = (
-                self.client.from_("entities")
-                .select("id")
-                .text_search("about", keywords)
-                .execute()
-            )
+            keywords = keywords.strip()
 
             result_experts = self.client.rpc(
                 "search_experts_with_keyword", {"q": keywords}
             ).execute()
-
-            # get nonprofits by entity ids
-            result_nonprofits = []
-            for entity in result_entities.data:
-                nonprofits = (
-                    self.client.table("nonprofits")
-                    .select("*")
-                    .eq("entity_id", entity["id"])
-                    .execute()
-                )
-                if nonprofits.data:
-                    result_nonprofits.extend(nonprofits.data)
-
-            # filter result_entities to only include those with matching nonprofits
-            result_entities.data = [
-                entity
-                for entity in result_entities.data
-                if any(
-                    nonprofit["entity_id"] == entity["id"]
-                    for nonprofit in result_nonprofits
-                )
-            ]
 
             result_entities = self.client.rpc(
                 "search_entities_with_keyword", {"q": keywords}

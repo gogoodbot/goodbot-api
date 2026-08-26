@@ -2,9 +2,12 @@
 text search data operations route v1
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import time
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 
 from data.database_repository import DatabaseRepository
+from data.search_analytics_service import SearchAnalyticsService
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -22,9 +25,19 @@ def get_database_repository() -> DatabaseRepository:
     return DatabaseRepository()
 
 
+def get_search_analytics_service() -> SearchAnalyticsService:
+    """
+    dependency to get the SearchAnalyticsService instance.
+    """
+    return SearchAnalyticsService()
+
+
 @router.get("/{query}")
 async def search(
-    query: str, repository: DatabaseRepository = Depends(get_database_repository)
+    query: str,
+    background_tasks: BackgroundTasks,
+    repository: DatabaseRepository = Depends(get_database_repository),
+    analytics_service: SearchAnalyticsService = Depends(get_search_analytics_service),
 ):
     """
     search for entities and experts by keywords
@@ -47,13 +60,25 @@ async def search(
         )
 
     try:
+        start_time = time.perf_counter()
+
         # Execute the search
         result = await repository.search_by_keywords(query)
+
+        duration_ms = int((time.perf_counter() - start_time) * 1000)
 
         # If the data is None, return empty results
         if result is None:
             logger.info(f"No results found for query: {query}")
             return {"nonprofits": [], "experts": [], "query": query}
+
+        # fire off background task to track search event analytics
+        background_tasks.add_task(
+            analytics_service.track_search,
+            query=query,
+            search_result=result,
+            duration_ms=duration_ms,
+        )
 
         logger.info(f"Search successful for query: {query}")
         return result

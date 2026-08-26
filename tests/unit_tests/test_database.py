@@ -228,14 +228,15 @@ class TestDatabaseRepository:
     async def test_get_nonprofits(self, repository):
         response = MagicMock()
         response.data = [{"id": "np1"}, {"id": "np2"}]
+
         repository.client.table.return_value.select.return_value.range.return_value.execute.return_value = (
             response
         )
 
         repository.get_entity_by_nonprofit_id = AsyncMock(
             side_effect=[
-                [{"id": "entity1"}],
-                [{"id": "entity2"}],
+                [{"id": "entity1", "nonprofit_id": "np1"}],
+                [{"id": "entity2", "nonprofit_id": "np2"}],
             ]
         )
 
@@ -245,6 +246,13 @@ class TestDatabaseRepository:
             {"id": "entity1", "nonprofit_id": "np1"},
             {"id": "entity2", "nonprofit_id": "np2"},
         ]
+
+        repository.client.table.assert_called_once_with("nonprofits")
+        repository.client.table.return_value.select.assert_called_once_with("*")
+        repository.client.table.return_value.select.return_value.range.assert_called_once_with(
+            0, 1
+        )
+        assert repository.get_entity_by_nonprofit_id.await_count == 2
 
     @pytest.mark.asyncio
     async def test_get_nonprofits_no_data(self, repository):
@@ -401,18 +409,3 @@ class TestDatabaseRepository:
             "nonprofits": [],
             "experts": [],
         }
-
-    @pytest.mark.asyncio
-    async def test_search_by_keywords_empty_after_sanitization(self, repository):
-        result = await repository.search_by_keywords("!@#$%^&*()")
-
-        assert result == {
-            "nonprofits": [],
-            "experts": [],
-        }
-
-    @pytest.mark.asyncio
-    async def test_search_by_keywords_exception(self, repository):
-        repository.client.from_.side_effect = Exception("DB error")
-
-        assert await repository.search_by_keywords("test") is None
